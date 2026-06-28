@@ -108,7 +108,7 @@ function Flow() {
               );
             })}
           </div>
-          <p className="mt-3 text-center text-xs text-gray-400">One-tap add-ons charge to your card on file — live once payments are enabled.</p>
+          <p className="mt-3 text-center text-xs text-gray-400">One-tap add-ons you can buy right after your reveal — available once payments are enabled.</p>
         </div>
       </div>
     );

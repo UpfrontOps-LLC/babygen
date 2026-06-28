@@ -26,8 +26,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <div className="flex-1">{children}</div>
         <footer className="border-t border-rose-100 py-6 px-4 text-center text-xs text-gray-400">
           <p className="max-w-xl mx-auto">
-            For entertainment only — an AI&apos;s imagination, not a real genetic prediction. Photos are processed to
-            generate your image and are <strong>not stored</strong> after generation.
+            For entertainment only — an AI&apos;s imagination, not a real genetic prediction. The photos you upload are
+            processed (including by our AI provider) to create your image, then <strong>deleted</strong>.
           </p>
           <p className="mt-2 space-x-3">
             <Link href="/privacy" className="hover:text-rose-500 underline">Privacy</Link>
