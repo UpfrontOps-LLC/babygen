@@ -1,14 +1,14 @@
-# See Our Baby — Compliant Ad Copy Variants (Meta / TikTok)
+# See Our Baby — Compliance-Conscious Ad Copy Drafts (Meta / TikTok)
 
 **Why this exists:** the ad is the *only* traffic source. If it's rejected, revenue = $0.
-These variants are written to pass policy review AND convert cold traffic.
+These are DRAFTS written to be policy-aware AND convert cold traffic. **Nothing here is "approved"** — Meta/TikTok ad review is discretionary/automated; copy can only be confirmed compliant after actual submission.
 
 ## Hard compliance rules (baked into every variant)
 - **No "personal attributes" violations (Meta):** never assert/imply we *know* the viewer's family or reproductive status. Use playful, hypothetical framing ("what *could* a baby look like") — not "see YOUR baby" stated as fact about their life.
-- **No before/after** framing in copy or creative (restricted category).
+- **Avoid before/after** framing as a precaution. (Meta's explicit before/after restriction is scoped to health/wellness, not a blanket rule — but parent→baby transformations can read that way.)
 - **Always disclose:** "AI-generated, just for fun." Avoid prediction/medical claims ("accurate", "real", "DNA test").
 - **No sensational body/medical claims.** No targeting pregnancy/fertility interests (keep targeting broad — lookalike/interest-light — to avoid sensitive-attribute targeting flags).
-- Creative must carry an on-screen "AI-generated • for fun" label.
+- Creative **should** carry an on-screen "AI-generated • for fun" label (AI disclosure is increasingly expected; treat as strongly recommended, not a confirmed hard rule for novelty face apps).
 
 ## Variants (Primary text · Headline · Description · CTA)
 **V1 — Curiosity (safest)**
@@ -36,7 +36,7 @@ These variants are written to pass policy review AND convert cold traffic.
 - CTA: Try It
 
 ## Creative notes
-- Lead with the **video** (giggle clip) — motion beats static for CTR on this category.
+- Lead with the **video** (giggle clip). Animated-baby creative showed the highest CTR in TikTok Creative Center mining (e.g. a "walking baby" ad at Top 78% CTR), so motion is a strong bet — but A/B vs static to confirm for our own creative.
 - On-screen text overlay: "AI-generated • just for fun".
 - No real before/after; show example AI babies (not real children's photos).
 - Landing page already carries Privacy/Terms/consent/disclaimer (required for approval).

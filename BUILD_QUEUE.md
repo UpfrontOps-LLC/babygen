@@ -15,11 +15,11 @@ Start generation at the "CVV entered" moment so the wait overlaps the payment, w
   ```js
   paymentElement.on("change", (e) => { if (e.complete && !started.current) { started.current = true; fetch("/api/generate-start", {method:"POST", body: JSON.stringify({token})}); } });
   ```
-  `e.complete === true` = card # + expiry + **CVC** all valid → the granular "typing CVV done" signal.
+  `e.complete === true` means **all required PaymentElement fields are valid** (card #, expiry, CVC — plus any billing fields the Element is configured to collect), per https://docs.stripe.com/js/element/events/on_change. It's the closest proxy to "card fully entered," but is NOT guaranteed to fire at the exact CVV keystroke — don't market it as a literal "typing CVV" signal.
 - New `POST /api/generate-start {token}`: begins generation from stored parents, stores images under token. Idempotent. (Speculative — fired pre-confirm.)
 - On Pay click → `stripe.confirmPayment(...)` → on success go to `/success?token=…&payment_intent=…`.
 - `/success`: show the entertaining wait if images aren't ready yet; **release images ONLY after verifying the PaymentIntent status === "succeeded"** (server pay-gate stays — early gen sits ready, never delivered unpaid).
-- Accept ~5–10% abandon-COGS (filled full card then bailed) as the cost of a near-zero felt wait.
+- Accept some abandon-COGS (filled full card then bailed). **The "~5–10%" figure is an unmeasured assumption** — instrument it live and adjust; speculative pre-confirm generation only pays off while that rate stays small.
 
 ## 2. Wire the upsell ladder (currently stubbed on /success)
 video (+$7) / age-progression (+$9) / boy-girl (+$5) / twins (+$5) / HD (+$5). Each = its own PaymentIntent → post-pay re-generation (image via nano-banana-pro; video via seedance-1-lite — both proven).

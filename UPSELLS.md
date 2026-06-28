@@ -1,9 +1,10 @@
 # BabyGen — Upsell Flows & A/B Test Matrix (the money layer)
 
 **North metric: Revenue Per Visitor (RPV = conversion × AOV).** Not conversion alone.
-Strike at **peak emotion = the instant after the reveal**, card on file → one-click upsells convert highest.
+Hypothesis to validate (A/B matrix below): strike at **peak emotion = the instant after the reveal**, card on file → one-click upsells convert highest. Standard direct-response heuristic, **not yet measured for babygen**.
 
-## Add-on products (each = a paid re-generation; COGS ~$0.13 image / ~$0.30 video → fat margin)
+## Add-on products (each = a paid re-generation)
+> ⚠️ **COGS figures below are UNVERIFIED estimates.** Confirm real Replicate per-run prices for `nano-banana-pro` (premium Gemini-3 image model) and `seedance-1-lite` at replicate.com before trusting any margin math. Placeholders, not facts.
 | Add-on | Price | COGS | Notes |
 |---|---|---|---|
 | Giggle video (5s) | $7–9 | ~$0.30 | seedance-1-lite (proven) |
@@ -17,8 +18,8 @@ Strike at **peak emotion = the instant after the reveal**, card on file → one-
 
 ## Flows to build + A/B test
 1. **Order bump (pre-pay):** checkbox on checkout — "+ giggling video $7." Lifts AOV at payment, ~0 friction.
-2. **Good-better-best paywall:** Basic $17.99 (3 imgs) / Deluxe $29 (+video) / Ultimate $49 (+video+ages+HD). Anchor high; mid = target.
-3. **Post-purchase 1-click OTO ladder** (Stripe saved card, off-session): OTO1 ages $9 → declined → downsell $5; OTO2 twins/family $5; OTO3 HD $5. One-click = peak take-rate.
+2. **Good-better-best paywall:** Basic $17.99 (3 imgs) / Deluxe $29 (+video) / Ultimate $49 (+video+ages+HD). (Anchor-high/mid-as-target is a pricing heuristic — validate in the A/B matrix.)
+3. **Post-purchase 1-click OTO ladder** (Stripe saved card, off-session): OTO1 ages $9 → declined → downsell $5; OTO2 twins/family $5; OTO3 HD $5. (One-click aims for peak take-rate — heuristic to measure.)
 4. **Bundle vs à la carte:** "Everything $29" vs pick-individual.
 5. **Share-for-discount (viral):** "share your baby → $3 off the video" — AOV + free reach (AITA angle).
 6. **Subscription (test, likely weak):** "unlimited babies $19/mo" — novelty=one-time intent; small test only.
