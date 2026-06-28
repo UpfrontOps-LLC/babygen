@@ -78,6 +78,17 @@ export default function Home() {
         Upload a photo of each parent — see your future baby in HD. 👶
       </p>
 
+      {/* proof of quality for cold buyers (real AI outputs, labeled) */}
+      <div className="mt-6 w-full max-w-md">
+        <p className="text-center text-xs text-gray-400 mb-2">✨ Example results (AI-generated)</p>
+        <div data-examples className="grid grid-cols-3 gap-2">
+          {[1, 2, 3].map((i) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img key={i} src={`/examples/baby${i}.png`} alt="example AI baby" className="rounded-xl aspect-square object-cover" />
+          ))}
+        </div>
+      </div>
+
       <div className="mt-8 grid grid-cols-2 gap-4 w-full max-w-md">
         <Upload label="Parent 1" file={a} onPick={setA} />
         <Upload label="Parent 2" file={b} onPick={setB} />
@@ -94,7 +105,12 @@ export default function Home() {
                 role="radio"
                 aria-checked={active}
                 data-tier={t.id}
-                onClick={() => setTier(t.id)}
+                onClick={() => {
+                  if (t.id !== tier) {
+                    setTier(t.id);
+                    track("tier_select", { variant, tier: t.id, meta: { from: tier } });
+                  }
+                }}
                 className={`relative rounded-2xl border-2 p-3 text-left transition ${active ? "border-rose-500 bg-rose-50 shadow-md" : "border-rose-100 bg-white hover:border-rose-300"}`}
               >
                 {t.badge && (
@@ -113,7 +129,7 @@ export default function Home() {
 
       {ready && showBump && (
         <label data-bump className="mt-5 flex items-center gap-2 w-full max-w-md text-sm cursor-pointer bg-white border border-rose-200 rounded-xl px-4 py-3 shadow-sm">
-          <input type="checkbox" checked={bump} onChange={(e) => setBump(e.target.checked)} aria-label="bump" />
+          <input type="checkbox" checked={bump} onChange={(e) => { setBump(e.target.checked); track("bump_toggle", { variant, tier, meta: { on: e.target.checked } }); }} aria-label="bump" />
           <span className="flex-1">🎥 Add a giggling <strong>video</strong> of your baby</span>
           <span className="text-rose-500 font-bold">+$7</span>
         </label>
