@@ -65,7 +65,7 @@ test.describe("pre-checkout funnel", () => {
 
     // we stay on the funnel page and an error message renders
     await expect(page).toHaveURL(/\/$|localhost/);
-    await expect(page.getByText(/stripe not configured|checkout unavailable|error/i)).toBeVisible();
+    await expect(page.getByText(/unavailable|try again/i)).toBeVisible();
     // no uncaught exceptions from the failed fetch
     expect(errors.filter((e) => e.startsWith("pageerror")), errors.join("\n")).toEqual([]);
   });
