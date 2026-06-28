@@ -27,6 +27,15 @@ export default function Terms() {
         <a className="underline" href="mailto:support@seeourbaby.com">support@seeourbaby.com</a> and we&apos;ll make it right.
       </p>
 
+      <h2 className="font-semibold mt-6">SMS / text messaging terms</h2>
+      <ul className="list-disc pl-5">
+        <li><strong>Program.</strong> By opting in, you agree to receive recurring automated marketing and transactional texts (order updates, results-ready alerts, and offers) from See Our Baby (UpfrontOps LLC).</li>
+        <li><strong>Cost.</strong> Message and data rates may apply. <strong>Frequency.</strong> Message frequency varies.</li>
+        <li><strong>Opt-out.</strong> Reply STOP to any message to unsubscribe; we send one confirmation, then stop. <strong>Help.</strong> Reply HELP or email <a className="underline" href="mailto:support@seeourbaby.com">support@seeourbaby.com</a>.</li>
+        <li><strong>Carriers.</strong> Supported carriers include AT&amp;T, T-Mobile, Verizon, and others; carriers are not liable for delayed or undelivered messages.</li>
+        <li><strong>Consent is not a condition of purchase.</strong> You must be 18+ and the account holder (or authorized) for the number provided. We do not sell or share your mobile information with third parties for marketing.</li>
+      </ul>
+
       <h2 className="font-semibold mt-6">No warranty</h2>
       <p>The service is provided &quot;as is,&quot; without warranties. Results vary. Liability is limited to the amount you paid.</p>
 

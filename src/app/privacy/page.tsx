@@ -24,6 +24,25 @@ export default function Privacy() {
       <h2 className="font-semibold mt-6">Payment</h2>
       <p>Payments are processed by Stripe. We never see or store your card details.</p>
 
+      <h2 className="font-semibold mt-6">SMS / Text Messaging</h2>
+      <p>
+        If you provide your mobile phone number and opt in, See Our Baby (operated by UpfrontOps LLC) uses it to send
+        recurring automated text messages about your orders (order confirmations, results-ready notifications, and
+        account notices) and, where you have consented, promotional offers.
+      </p>
+      <p>
+        <strong>No mobile information will be shared with, sold, rented, or otherwise disclosed to third parties or
+        affiliates for their marketing or promotional purposes at any time.</strong> We do not sell or share your SMS
+        opt-in consent or phone number with any third party for marketing. Phone numbers may be shared only with our
+        messaging service provider (Twilio) strictly to deliver the messages you requested, and as required by law.
+      </p>
+      <p>
+        Message frequency varies. Message and data rates may apply. Opt out any time by replying STOP; reply HELP for
+        help or email{" "}
+        <a className="underline" href="mailto:support@seeourbaby.com">support@seeourbaby.com</a>. Carriers are not liable
+        for delayed or undelivered messages.
+      </p>
+
       <h2 className="font-semibold mt-6">What we collect</h2>
       <p>Order info and basic analytics. We do not sell personal information.</p>
 
