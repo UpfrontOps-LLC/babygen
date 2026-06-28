@@ -8,24 +8,24 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"),
-  title: "See Our Baby — AI Future Baby Generator",
+  title: "See Our Baby | AI Future Baby Generator",
   description:
-    "Upload a photo of each parent and our AI imagines what your future baby could look like — just for fun, in seconds.",
+    "Upload a photo of each parent and our AI imagines what your future baby could look like, just for fun, in seconds.",
   openGraph: {
-    title: "See Our Baby — What will your baby look like?",
+    title: "See Our Baby: What will your baby look like?",
     description: "Upload two parents, see your future baby in HD. AI-generated, just for fun. 👶",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "See Our Baby — What will your baby look like?",
+    title: "See Our Baby: What will your baby look like?",
     description: "Upload two parents, see your future baby in HD. AI-generated, just for fun. 👶",
   },
   alternates: { canonical: "/" },
   robots: { index: true, follow: true },
 };
 
-// Honest structured data only — no ratings/accuracy claims we can't back.
+// Honest structured data only, no ratings/accuracy claims we can't back.
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
@@ -42,7 +42,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <div className="flex-1">{children}</div>
         <footer className="border-t border-rose-100 py-6 px-4 text-center text-xs text-gray-400">
           <p className="max-w-xl mx-auto">
-            For entertainment only — an AI&apos;s imagination, not a real genetic prediction. The photos you upload are
+            For entertainment only. An AI&apos;s imagination, not a real genetic prediction. The photos you upload are
             processed (including by our AI provider) to create your image, then <strong>deleted</strong>.
           </p>
           <p className="mt-2 space-x-3">

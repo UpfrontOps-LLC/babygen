@@ -3,7 +3,7 @@ import { collectPageErrors } from "./helpers";
 
 const HEADLINES: Record<string, string> = {
   A: "What will your baby look like?",
-  B: "See your future baby — in seconds.",
+  B: "See your future baby in seconds.",
 };
 
 test.describe("landing page", () => {

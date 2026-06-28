@@ -1,12 +1,12 @@
 // Holds the uploaded PARENT photos against a token until payment clears, then the
 // generated baby images. Nothing is generated until Stripe confirms payment.
-// DEV/TEST: in-memory. PROD (Cloudflare): swap for KV — see DEPLOY_STRIPE.md.
+// DEV/TEST: in-memory. PROD (Cloudflare): swap for KV, see DEPLOY_STRIPE.md.
 // `paid` is the durable, webhook-set source of truth that a payment cleared;
 // the /api/generate gate trusts it (falling back to a live session lookup).
 type Entry = { parents: string[]; images?: string[]; createdAt: number; paid?: boolean; tier?: string; bump?: string };
 const g = globalThis as unknown as { __babyStore?: Map<string, Entry>; __babyEvents?: Set<string> };
 const store = g.__babyStore ?? (g.__babyStore = new Map<string, Entry>());
-// Stripe event IDs we've already fulfilled — makes webhook delivery idempotent.
+// Stripe event IDs we've already fulfilled, makes webhook delivery idempotent.
 const seen = g.__babyEvents ?? (g.__babyEvents = new Set<string>());
 
 export function putParents(token: string, parents: string[]) {

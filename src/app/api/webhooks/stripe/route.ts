@@ -3,14 +3,14 @@ import Stripe from "stripe";
 import { markPaid, claimEvent } from "@/lib/store";
 
 export const runtime = "nodejs";
-// Stripe signature verification needs the EXACT raw bytes — never parse the body.
+// Stripe signature verification needs the EXACT raw bytes, never parse the body.
 export const dynamic = "force-dynamic";
 
 const SKEY = process.env.STRIPE_SECRET_KEY;
 const WHSEC = process.env.STRIPE_WEBHOOK_SECRET;
 
 /**
- * Stripe webhook (standalone babygen account — no Connect).
+ * Stripe webhook (standalone babygen account, no Connect).
  *
  * Authoritative confirmation that a Checkout payment cleared. On
  * `checkout.session.completed` it marks the token paid in the store, which the

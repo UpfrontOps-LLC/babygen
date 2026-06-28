@@ -13,7 +13,7 @@ const fmt = (cents: number) => `$${(cents / 100).toFixed(2).replace(/\.00$/, "")
 
 const HEADLINES: Record<string, string> = {
   A: "What will your baby look like?",
-  B: "See your future baby — in seconds.",
+  B: "See your future baby in seconds.",
 };
 
 function track(event: string, data: Record<string, unknown> = {}) {
@@ -69,7 +69,7 @@ export default function Home() {
   }, []);
 
   const selected = TIERS.find((t) => t.id === tier) ?? TIERS[1];
-  const showBump = tier === "basic"; // Deluxe/Ultimate already include video — don't sell it twice
+  const showBump = tier === "basic"; // Deluxe/Ultimate already include video, don't sell it twice
   const total = selected.price + (showBump && bump ? 700 : 0);
 
   async function checkout() {
@@ -101,12 +101,12 @@ export default function Home() {
         {HEADLINES[variant]}
       </h1>
       <p className="mt-3 text-lg text-gray-600 text-center max-w-xl">
-        Upload a photo of each parent — see your future baby in HD. 👶
+        Upload a photo of each parent and meet your future baby in HD. 👶
       </p>
 
       {/* proof of quality for cold buyers (real AI outputs, labeled) */}
       <div className="mt-6 w-full max-w-md">
-        <p className="text-center text-xs text-gray-400 mb-2">✨ Example results (AI-generated)</p>
+        <p className="text-center text-xs text-gray-400 mb-2">✨ Real example results</p>
         <div data-examples className="grid grid-cols-3 gap-2">
           {[1, 2, 3].map((i) => (
             // eslint-disable-next-line @next/next/no-img-element
@@ -166,7 +166,7 @@ export default function Home() {
           <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5" aria-label="consent" />
           <span>
             I have the right to use these photos and consent to AI processing of them. I understand results are{" "}
-            <strong>AI-generated for fun — not a real prediction</strong>, and my photos are <strong>not stored</strong> after generation.
+            <strong>AI-generated for fun, not a real prediction</strong>, and my photos are <strong>not stored</strong> after generation.
           </span>
         </label>
       )}
@@ -178,7 +178,7 @@ export default function Home() {
         onClick={checkout}
         className="mt-6 px-8 py-4 rounded-full bg-rose-500 text-white text-lg font-bold shadow-lg disabled:opacity-40 hover:bg-rose-600 transition"
       >
-        {busy ? "Taking you to checkout…" : !ready ? "Upload both parents to start" : !agreed ? "Tick the box to continue" : `Reveal our baby — ${fmt(total)} →`}
+        {busy ? "Taking you to checkout…" : !ready ? "Upload both parents to start" : !agreed ? "Tick the box to continue" : `Reveal our baby for ${fmt(total)} →`}
       </button>
       <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-gray-500 max-w-md text-center">
         <span>🔒 Secure checkout · Stripe</span>
@@ -186,7 +186,7 @@ export default function Home() {
         <span>⚡ HD results in ~30s</span>
       </div>
       <p className="mt-2 text-xs text-gray-400 text-center max-w-xs">
-        AI-generated entertainment, results vary. All sales final.
+        For entertainment, results vary. All sales final.
       </p>
     </main>
   );

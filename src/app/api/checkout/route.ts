@@ -6,9 +6,9 @@ export const runtime = "nodejs";
 
 const key = process.env.STRIPE_SECRET_KEY;
 const TIERS: Record<string, { price: number; name: string }> = {
-  basic: { price: 1799, name: "Your AI Baby — Basic (3 HD photos)" },
-  deluxe: { price: 2900, name: "Your AI Baby — Deluxe (3 HD photos + giggle video)" },
-  ultimate: { price: 4900, name: "Your AI Baby — Ultimate (photos + age progression + HD)" },
+  basic: { price: 1799, name: "Your AI Baby, Basic (3 HD photos)" },
+  deluxe: { price: 2900, name: "Your AI Baby, Deluxe (3 HD photos + giggle video)" },
+  ultimate: { price: 4900, name: "Your AI Baby, Ultimate (photos + age progression + HD)" },
 };
 
 async function toDataUri(f: File): Promise<string> {
@@ -18,7 +18,7 @@ async function toDataUri(f: File): Promise<string> {
 }
 
 // Takes the two parent photos, stores them against a token, and creates a Stripe
-// Checkout session. NOTHING is generated yet — generation happens post-payment.
+// Checkout session. NOTHING is generated yet, generation happens post-payment.
 export async function POST(req: NextRequest) {
   if (!key) {
     return NextResponse.json({ error: "stripe not configured (set STRIPE_SECRET_KEY)" }, { status: 500 });
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "upload two photos" }, { status: 400 });
   }
   for (const f of [a, b]) {
-    if (f.size < 1_000) return NextResponse.json({ error: `that photo didn't upload right (only ${f.size} bytes) — try a different one` }, { status: 400 });
+    if (f.size < 1_000) return NextResponse.json({ error: `that photo didn't upload right (only ${f.size} bytes), try a different one` }, { status: 400 });
     if (f.size > 25_000_000) return NextResponse.json({ error: "photo too large (max 25MB)" }, { status: 400 });
   }
 

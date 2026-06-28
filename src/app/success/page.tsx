@@ -4,9 +4,9 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 const QUESTIONS = [
-  { q: "While we paint your baby — boy or girl? 👶", opts: ["👦 Boy", "👧 Girl"] },
+  { q: "While we paint your baby, boy or girl? 👶", opts: ["👦 Boy", "👧 Girl"] },
   { q: "Whose nose wins? 👃", opts: ["Mom's", "Dad's"] },
-  { q: "Hair — curly or straight? 🌀", opts: ["Curly", "Straight"] },
+  { q: "Hair, curly or straight? 🌀", opts: ["Curly", "Straight"] },
   { q: "Dimples? ✨", opts: ["Yes!", "Nope"] },
   { q: "Who'll they look more like? 👀", opts: ["Mom", "Dad"] },
 ];
@@ -14,7 +14,7 @@ const FACTS = [
   "👁️ Eye color comes from 16+ genes…",
   "🦴 Babies are born with ~300 bones…",
   "👂 They can already know a parent's voice…",
-  "🧬 Half from each of you — blending now…",
+  "🧬 Half from each of you, blending now…",
   "😴 Newborns sleep up to 17 hrs a day…",
 ];
 const UPSELLS = [
@@ -55,7 +55,7 @@ function Flow() {
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    if (sp.get("preview") === "1") { setImages(PREVIEW_IMAGES); return; } // QA preview — example images, no payment
+    if (sp.get("preview") === "1") { setImages(PREVIEW_IMAGES); return; } // QA preview, example images, no payment
     const token = sp.get("token");
     const sessionId = sp.get("session_id");
     if (!token || !sessionId) { setErr("missing payment info"); return; }
@@ -74,7 +74,7 @@ function Flow() {
       <p className="text-red-500 text-center max-w-sm">
         {err}
         <br />
-        <span className="text-gray-500 text-sm">Refresh to retry — you won&apos;t be charged again.</span>
+        <span className="text-gray-500 text-sm">Refresh to retry, you won&apos;t be charged again.</span>
       </p>
     );
 
@@ -83,7 +83,7 @@ function Flow() {
     const guess = answers[0]?.toLowerCase().includes("girl") ? "girl" : answers[0] ? "boy" : null;
     return (
       <div className="w-full max-w-2xl flex flex-col items-center">
-        {guess && <p className="text-rose-600 mb-3">You guessed a {guess} — here&apos;s the truth 👀</p>}
+        {guess && <p className="text-rose-600 mb-3">You guessed a {guess}, here&apos;s the truth 👀</p>}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {images.map((src, i) => (
             // eslint-disable-next-line @next/next/no-img-element
@@ -108,7 +108,7 @@ function Flow() {
               );
             })}
           </div>
-          <p className="mt-3 text-center text-xs text-gray-400">One-tap add-ons you can buy right after your reveal — available once payments are enabled.</p>
+          <p className="mt-3 text-center text-xs text-gray-400">One-tap add-ons you can buy right after your reveal, available once payments are enabled.</p>
         </div>
       </div>
     );
@@ -148,7 +148,7 @@ function Flow() {
           </>
         )}
       </div>
-      <p className="mt-2 text-xs text-gray-400">Hang tight — your baby is being created. Don&apos;t close this page!</p>
+      <p className="mt-2 text-xs text-gray-400">Hang tight, your baby is being created. Don&apos;t close this page!</p>
     </div>
   );
 }

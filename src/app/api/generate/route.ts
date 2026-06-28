@@ -37,7 +37,7 @@ async function generateOne(prompt: string, refs: string[]): Promise<string> {
   return Array.isArray(pred.output) ? pred.output[0] : pred.output;
 }
 
-// POST { token, session_id } — verifies payment, THEN generates from the stored parents.
+// POST { token, session_id }, verifies payment, THEN generates from the stored parents.
 export async function POST(req: NextRequest) {
   if (!TOKEN || !SKEY) return NextResponse.json({ error: "server not configured" }, { status: 500 });
   try {
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     console.error("[generate] PAID START", new Date().toISOString(), token.slice(0, 8));
     const settled = await Promise.allSettled(VARIANTS.map((v) => generateOne(babyPrompt(v), entry.parents)));
     const urls = settled.filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled").map((r) => r.value);
-    if (urls.length === 0) return NextResponse.json({ error: "generation failed — refresh to retry, you won't be charged again" }, { status: 502 });
+    if (urls.length === 0) return NextResponse.json({ error: "generation failed, refresh to retry, you won't be charged again" }, { status: 502 });
 
     // Download to data URIs so the result survives the ephemeral Replicate URLs.
     const images: string[] = [];
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
       images.push(`data:image/png;base64,${buf.toString("base64")}`);
     }
     setImages(token, images);
-    clearParents(token); // delete the source parent photos — keeps the deletion promise
+    clearParents(token); // delete the source parent photos, keeps the deletion promise
     console.error(`[generate] DONE ${((Date.now() - t0) / 1000).toFixed(1)}s (${images.length}/${VARIANTS.length})`);
     return NextResponse.json({ images });
   } catch (e) {

@@ -1,4 +1,4 @@
-export const metadata = { title: "Privacy Policy — See Our Baby" };
+export const metadata = { title: "Privacy Policy, See Our Baby" };
 
 export default function Privacy() {
   return (

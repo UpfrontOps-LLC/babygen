@@ -1,4 +1,4 @@
-export const metadata = { title: "Refund Policy — See Our Baby" };
+export const metadata = { title: "Refund Policy, See Our Baby" };
 
 export default function Refunds() {
   return (
@@ -15,7 +15,7 @@ export default function Refunds() {
       <p>
         Your purchase is meant to deliver AI-generated baby images (and any add-ons you chose). If a technical problem
         means your order <strong>failed to generate</strong> or you never received your results, contact us and we will{" "}
-        <strong>re-run the generation at no cost or issue a full refund</strong>. Refresh the results page first — a
+        <strong>re-run the generation at no cost or issue a full refund</strong>. Refresh the results page first, a
         successful retry won&apos;t charge you again.
       </p>
 
@@ -23,7 +23,7 @@ export default function Refunds() {
       <p>
         Because the product is a digital good produced on demand and delivered immediately, and because AI results are
         inherently subjective, completed orders are otherwise <strong>non-refundable</strong>. Results are AI-generated
-        for entertainment and are not a real, medical, or genetic prediction of any actual child — please review the
+        for entertainment and are not a real, medical, or genetic prediction of any actual child, please review the
         examples on our home page before purchasing.
       </p>
 

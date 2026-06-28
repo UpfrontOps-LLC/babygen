@@ -39,17 +39,17 @@ test.describe("pre-checkout funnel", () => {
     await expect(cta).toBeDisabled();
 
     await consent.check();
-    await expect(cta).toHaveText(/Reveal our baby — \$29/);
+    await expect(cta).toHaveText(/Reveal our baby for \$29/);
     await expect(cta).toBeEnabled();
 
     // Basic + bump → 17.99 + 7.00 = 24.99
     await page.locator('[data-tier="basic"]').click();
     await page.locator('[data-bump] input[type="checkbox"]').check();
-    await expect(cta).toHaveText(/Reveal our baby — \$24\.99/);
+    await expect(cta).toHaveText(/Reveal our baby for \$24\.99/);
 
     // Ultimate → 49
     await page.locator('[data-tier="ultimate"]').click();
-    await expect(cta).toHaveText(/Reveal our baby — \$49/);
+    await expect(cta).toHaveText(/Reveal our baby for \$49/);
   });
 
   test("submitting checkout while Stripe is unconfigured surfaces an error, not a crash", async ({ page }) => {

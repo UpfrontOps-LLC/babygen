@@ -1,4 +1,4 @@
-export const metadata = { title: "Terms of Service — See Our Baby" };
+export const metadata = { title: "Terms of Service, See Our Baby" };
 
 export default function Terms() {
   return (

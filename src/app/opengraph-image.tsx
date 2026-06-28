@@ -1,11 +1,11 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "nodejs";
-export const alt = "See Our Baby — AI Future Baby Generator";
+export const alt = "See Our Baby, AI Future Baby Generator";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// Branded social-share preview — makes shared links (the AITA/organic angle)
+// Branded social-share preview, makes shared links (the AITA/organic angle)
 // look good, which lifts click-through = free traffic.
 export default function OpengraphImage() {
   return new ImageResponse(
