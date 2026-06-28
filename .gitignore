@@ -44,3 +44,4 @@ next-env.d.ts
 test-out/
 *.log
 .proof/
+.data/

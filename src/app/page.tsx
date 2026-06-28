@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Tier = { id: string; price: number; label: string; blurb: string; badge?: string };
 const TIERS: Tier[] = [
@@ -11,6 +11,17 @@ const TIERS: Tier[] = [
 
 const fmt = (cents: number) => `$${(cents / 100).toFixed(2).replace(/\.00$/, "")}`;
 
+const HEADLINES: Record<string, string> = {
+  A: "What will your baby look like?",
+  B: "See your future baby — in seconds.",
+};
+
+function track(event: string, data: Record<string, unknown> = {}) {
+  try {
+    fetch("/api/track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ event, ...data }) });
+  } catch {}
+}
+
 export default function Home() {
   const [a, setA] = useState<File | null>(null);
   const [b, setB] = useState<File | null>(null);
@@ -19,6 +30,17 @@ export default function Home() {
   const [agreed, setAgreed] = useState(false);
   const [tier, setTier] = useState<string>("deluxe");
   const [bump, setBump] = useState(false);
+  const [variant, setVariant] = useState("A");
+
+  useEffect(() => {
+    let v = document.cookie.match(/bg_ab=([AB])/)?.[1];
+    if (!v) {
+      v = Math.random() < 0.5 ? "A" : "B";
+      document.cookie = `bg_ab=${v};path=/;max-age=2592000`;
+    }
+    setVariant(v);
+    track("view", { variant: v });
+  }, []);
 
   const selected = TIERS.find((t) => t.id === tier) ?? TIERS[1];
   const showBump = tier === "basic"; // Deluxe/Ultimate already include video — don't sell it twice
@@ -28,6 +50,7 @@ export default function Home() {
     if (!a || !b) return;
     setBusy(true);
     setError(null);
+    track("checkout_click", { variant, tier, meta: { bump: showBump && bump } });
     try {
       const fd = new FormData();
       fd.append("parentA", a);
@@ -48,8 +71,8 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-rose-50 to-white text-gray-900 flex flex-col items-center px-4 py-10">
-      <h1 className="text-4xl sm:text-5xl font-extrabold text-center max-w-2xl leading-tight">
-        What will <span className="text-rose-500">your baby</span> look like?
+      <h1 data-variant={variant} className="text-4xl sm:text-5xl font-extrabold text-center max-w-2xl leading-tight text-gray-900">
+        {HEADLINES[variant]}
       </h1>
       <p className="mt-3 text-lg text-gray-600 text-center max-w-xl">
         Upload a photo of each parent — see your future baby in HD. 👶
