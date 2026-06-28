@@ -25,7 +25,7 @@ const UPSELLS = [
   { id: "hd", label: "🖼️ HD + printable pack", price: 5 },
 ];
 
-const PREVIEW_IMAGES = ["/examples/baby1.png", "/examples/baby2.png", "/examples/baby3.png"];
+const PREVIEW_IMAGES = ["/examples/baby1.webp", "/examples/baby2.webp", "/examples/baby3.webp"];
 
 function track(event: string, data: Record<string, unknown> = {}) {
   try {

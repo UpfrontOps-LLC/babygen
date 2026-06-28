@@ -1,5 +1,7 @@
 // Generate 3 example baby images (real tool output) for the landing proof strip.
+// Output is optimized WebP (~15-25KB) — the landing references /examples/babyN.webp.
 import { promises as fs } from "node:fs";
+import sharp from "sharp";
 const env = await fs.readFile("/opt/babygen/.env.local", "utf8");
 const TOKEN = (env.match(/^REPLICATE_API_TOKEN=(.+)$/m) || [])[1]?.trim();
 if (!TOKEN) { console.error("no token"); process.exit(1); }
@@ -30,7 +32,8 @@ const P = [
 await fs.mkdir("/opt/babygen/public/examples", { recursive: true });
 for (let i = 0; i < P.length; i++) {
   const b = await gen(P[i]);
-  await fs.writeFile(`/opt/babygen/public/examples/baby${i + 1}.png`, b);
-  console.log(`baby${i + 1}.png`, b.length, "bytes");
+  const webp = await sharp(b).resize(512, 512, { fit: "cover" }).webp({ quality: 80 }).toBuffer();
+  await fs.writeFile(`/opt/babygen/public/examples/baby${i + 1}.webp`, webp);
+  console.log(`baby${i + 1}.webp`, webp.length, "bytes");
 }
 console.log("DONE");

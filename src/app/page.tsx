@@ -84,7 +84,7 @@ export default function Home() {
         <div data-examples className="grid grid-cols-3 gap-2">
           {[1, 2, 3].map((i) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={i} src={`/examples/baby${i}.png`} alt="example AI baby" className="rounded-xl aspect-square object-cover" />
+            <img key={i} src={`/examples/baby${i}.webp`} alt="example AI baby" width={512} height={512} loading="eager" decoding="async" className="rounded-xl aspect-square object-cover" />
           ))}
         </div>
       </div>
