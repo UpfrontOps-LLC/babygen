@@ -7,6 +7,7 @@ export default function Home() {
   const [b, setB] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [agreed, setAgreed] = useState(false);
 
   async function checkout() {
     if (!a || !b) return;
@@ -51,14 +52,24 @@ export default function Home() {
         </div>
       )}
 
+      {ready && (
+        <label className="mt-6 flex items-start gap-2 max-w-md text-xs text-gray-500 cursor-pointer">
+          <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5" aria-label="consent" />
+          <span>
+            I have the right to use these photos and consent to AI processing of them. I understand results are{" "}
+            <strong>AI-generated for fun — not a real prediction</strong>, and my photos are <strong>not stored</strong> after generation.
+          </span>
+        </label>
+      )}
+
       {error && <p className="mt-4 text-red-500 text-center max-w-md">{error}</p>}
 
       <button
-        disabled={!ready || busy}
+        disabled={!ready || !agreed || busy}
         onClick={checkout}
-        className="mt-8 px-8 py-4 rounded-full bg-rose-500 text-white text-lg font-bold shadow-lg disabled:opacity-40 hover:bg-rose-600 transition"
+        className="mt-6 px-8 py-4 rounded-full bg-rose-500 text-white text-lg font-bold shadow-lg disabled:opacity-40 hover:bg-rose-600 transition"
       >
-        {busy ? "Taking you to checkout…" : ready ? "Reveal our baby — $17.99 →" : "Upload both parents to start"}
+        {busy ? "Taking you to checkout…" : !ready ? "Upload both parents to start" : !agreed ? "Tick the box to continue" : "Reveal our baby — $17.99 →"}
       </button>
       <p className="mt-3 text-xs text-gray-400 text-center max-w-xs">
         AI-generated entertainment, results vary. All sales final.
