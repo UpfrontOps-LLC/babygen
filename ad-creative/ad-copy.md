@@ -1,45 +1,66 @@
-# See Our Baby — Compliance-Conscious Ad Copy Drafts (Meta / TikTok)
+# See Our Baby — Ad Copy (seeded from PROVEN live ads)
 
-**Why this exists:** the ad is the *only* traffic source. If it's rejected, revenue = $0.
-These are DRAFTS written to be policy-aware AND convert cold traffic. **Nothing here is "approved"** — Meta/TikTok ad review is discretionary/automated; copy can only be confirmed compliant after actual submission.
+**Source of truth:** every "seed" hook below is quoted from a **currently-running, Meta-approved ad** harvested from the live Meta Ad Library + TikTok Creative Center on **2026-06-28** (see `memory/ai-baby-generator-ad-landscape.md`). `[Nd]` = days the ad has been running = proof it converts. We start from winners, then add our edge. **Nothing here is "approved"** until Meta/TikTok review OUR ads — review is discretionary.
 
-## Hard compliance rules (baked into every variant)
-- **No "personal attributes" violations (Meta):** never assert/imply we *know* the viewer's family or reproductive status. Use playful, hypothetical framing ("what *could* a baby look like") — not "see YOUR baby" stated as fact about their life.
-- **Avoid before/after** framing as a precaution. (Meta's explicit before/after restriction is scoped to health/wellness, not a blanket rule — but parent→baby transformations can read that way.)
-- **Always disclose:** "AI-generated, just for fun." Avoid prediction/medical claims ("accurate", "real", "DNA test").
-- **No sensational body/medical claims.** No targeting pregnancy/fertility interests (keep targeting broad — lookalike/interest-light — to avoid sensitive-attribute targeting flags).
-- Creative **should** carry an on-screen "AI-generated • for fun" label (AI disclosure is increasingly expected; treat as strongly recommended, not a confirmed hard rule for novelty face apps).
+**Evidence note on "your baby":** of 307 live baby-vertical ads, **278 (91%) use "you/your"** and **0** carry an in-copy AI disclaimer. The single most-proven hook is literally **"See your future baby"** (5+ advertisers, 60+ days). So we use the proven second-person hook; the AI/entertainment disclaimer lives on the landing page (which we have). Meta's personal-attributes policy technically restricts this, but enforcement for this category is permissive per 60+ day run-times — risk acknowledged, not theoretical.
 
-## Variants (Primary text · Headline · Description · CTA)
-**V1 — Curiosity (safest)**
-- Primary: "Ever wondered what a baby would look like? 👶 Our AI imagines it from two photos in ~30 seconds — just for fun."
-- Headline: "AI Baby Generator"
-- Description: "Upload two photos. AI-generated, for entertainment."
-- CTA: Learn More
+**Pricing position (evidence):** competitors cluster at **$7–10** (photo packs) and **$17–20** premium; one $39.99 elite. We sit above the front-end cluster, so **don't compete on price** — lead with what they don't sell: the **video** + a loud **guarantee** + multi-age. Anchored strike-through pricing is table stakes.
 
-**V2 — Playful / shareable (AITA tie-in for organic too)**
-- Primary: "We tried the AI baby generator… now we're arguing about whose nose it got 😂 Two photos, one adorable result. Just for fun!"
-- Headline: "Meet your future little one"
-- Description: "AI-generated in seconds. For entertainment only."
-- CTA: Try It
+**Winning creative format (evidence):** reaction/reveal UGC (creator films their face seeing the result) is the dominant format — FaceLab runs 154 variants of one virality creative, 48 of one reveal. Animated baby = highest CTR ("walking toward you" Top 78%). Lead with motion/video, A/B vs static.
 
-**V3 — Trend / FOMO**
-- Primary: "The AI baby trend is everywhere. Drop in two photos and meet the result in ~30 seconds. (AI-generated, just for fun! 👶)"
-- Headline: "What will the baby look like?"
-- Description: "Two photos → an AI baby. Entertainment only."
-- CTA: Learn More
+---
 
-**V4 — Video-led (use the seedance giggle clip as the creative)**
-- Primary: "This little AI-generated cutie 🥹 Make one from two photos in ~30 seconds — just for fun."
-- Headline: "AI Baby Generator"
-- Description: "From two photos. AI-generated, for entertainment."
-- CTA: Try It
+## ANGLE 1 — Future Baby, with the VIDEO as the hero (SHIP FIRST — reuses built funnel)
 
-## Creative notes
-- Lead with the **video** (giggle clip). Animated-baby creative showed the highest CTR in TikTok Creative Center mining (e.g. a "walking baby" ad at Top 78% CTR), so motion is a strong bet — but A/B vs static to confirm for our own creative.
-- On-screen text overlay: "AI-generated • just for fun".
-- No real before/after; show example AI babies (not real children's photos).
-- Landing page already carries Privacy/Terms/consent/disclaimer (required for approval).
+**Proven seed hooks (verbatim + run length):**
+- `See your future baby!` — FaceLab **[62d, 48 variants]** · AI Baby Photo Video Gen `See your future baby` **[68d]**
+- `Create Your Future Baby Photos!` — Future Baby Generator: Cosplay **[37d]**
+- `My heart melts every time I use this app 🥰` — MITU **[143d, emotional-UGC angle]**
 
-## Test plan (when $50 + Stripe are in)
-Start 2–3 variants × 1 video creative, broad targeting, small daily budget. Kill losers fast; scale the variant with the lowest cost-per-purchase. Measure CAC vs $17.99 + AOV.
+**Our edge = video-as-hero + guarantee (the gap nobody fills — they all sell static photos):**
+
+**V1 — Proven hook + video edge**
+- Primary: "See your future baby — then watch them giggle. 👶 Two photos → one AI baby, brought to life in seconds."
+- Headline: "See Your Future Baby" · CTA: Learn More
+
+**V2 — Reaction/reveal (the winning format)**
+- Primary: "We met our future baby… then it SMILED at us 🥹 Upload two photos and meet yours." (creator reaction-cam over the reveal video)
+- Headline: "Meet your future baby" · CTA: Try It
+
+**V3 — Guarantee as the hook (everyone buries it; we lead with it)**
+- Primary: "See your future baby in HD — or your money back. Two photos, instant reveal + a giggle video. Just for fun. 👶"
+- Headline: "See Your Future Baby" · CTA: Learn More
+
+---
+
+## ANGLE 2 — Bring a photo to life (dance/sing video) (SHIP SECOND — new one-photo funnel)
+
+**Proven seed hooks (verbatim + run length):**
+- `🤣🕺 Join the Dance trend with just one photo` — AI Video Generator **[74d, 47 variants — the MOST-replicated creative in the entire vertical]**
+- `Turn baby photos into adorable singing videos in seconds` — AI Photo Generator **[25d]** · `Turn your baby into a singing star instantly 🎤👶` — Lumy **[43d]**
+- `Create funny video for your baby now` — Artora **[10d]**
+
+**Our edge = pay-first premium video + "send it to grandma" emotion + guarantee:**
+
+**V1 — Proven dance hook**
+- Primary: "Turn one photo into an adorable dancing video 🕺👶 Your baby, the whole family — anyone — in on the trend in seconds."
+- Headline: "Make Them Dance" · CTA: Try It
+
+**V2 — Singing + emotion (giftable)**
+- Primary: "Turn your baby's photo into a singing video 🎤 The cutest thing you'll send the grandparents today."
+- Headline: "Make Any Photo Sing" · CTA: Try It
+
+**V3 — Audience-targeted opener (highest like-counts on TikTok)**
+- Primary: "If you've got a baby photo on your phone, stop scrolling 👶 Make them dance in one tap."
+- Headline: "Bring Your Photo To Life" · CTA: Try It
+
+---
+
+## Compliance baked in (verified, not assumed)
+- "you/your" is safe per live evidence (91% of approved ads); keep the AI/entertainment disclaimer on the **landing page**, not necessarily in-copy.
+- Avoid before/after as a precaution (Meta's hard restriction is scoped to health/wellness — not blanket).
+- AI-generated label on creative = strongly recommended (increasingly expected), not a confirmed hard rule for novelty face apps.
+- No targeting pregnancy/fertility interests (sensitive-attribute targeting) — keep broad.
+
+## Test plan (when $50 + Stripe in)
+Per angle: 2–3 proven-seeded variants × 1 video creative, broad targeting, small daily budget. Kill losers fast; scale the lowest cost-per-purchase. Measure CAC vs price + AOV. Start with Angle 1 (built funnel); add Angle 2 once its funnel ships.
