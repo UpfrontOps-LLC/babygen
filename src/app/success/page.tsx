@@ -26,6 +26,7 @@ const UPSELLS = [
 ];
 
 const PREVIEW_IMAGES = ["/examples/baby1.webp", "/examples/baby2.webp", "/examples/baby3.webp"];
+const PREVIEW_VIDEO = "/examples/sample-baby.mp4";
 
 function track(event: string, data: Record<string, unknown> = {}) {
   try {
@@ -36,6 +37,8 @@ function track(event: string, data: Record<string, unknown> = {}) {
 function Flow() {
   const sp = useSearchParams();
   const [images, setImages] = useState<string[] | null>(null);
+  const [video, setVideo] = useState<string | null>(null);
+  const [ages, setAges] = useState<string[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [step, setStep] = useState(0);
@@ -55,7 +58,7 @@ function Flow() {
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    if (sp.get("preview") === "1") { setImages(PREVIEW_IMAGES); return; } // QA preview, example images, no payment
+    if (sp.get("preview") === "1") { setImages(PREVIEW_IMAGES); setVideo(PREVIEW_VIDEO); setAges(PREVIEW_IMAGES); return; } // QA preview, example media, no payment
     const token = sp.get("token");
     const sessionId = sp.get("session_id");
     if (!token || !sessionId) { setErr("missing payment info"); return; }
@@ -65,7 +68,7 @@ function Flow() {
       body: JSON.stringify({ token, session_id: sessionId }),
     })
       .then((r) => r.json())
-      .then((d) => (d.images ? setImages(d.images) : setErr(d.error || "something went wrong")))
+      .then((d) => { if (d.images) { setImages(d.images); if (d.video) setVideo(d.video); if (d.ages) setAges(d.ages); } else setErr(d.error || "something went wrong"); })
       .catch(() => setErr("something went wrong"));
   }, [sp]);
 
@@ -84,12 +87,27 @@ function Flow() {
     return (
       <div className="w-full max-w-2xl flex flex-col items-center">
         {guess && <p className="text-rose-600 mb-3">You guessed a {guess}, here&apos;s the truth 👀</p>}
+        {video && (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <video src={video} autoPlay loop muted playsInline controls className="w-full max-w-sm rounded-2xl shadow-lg mb-4" />
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {images.map((src, i) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img key={i} src={src} alt="your baby" className="rounded-2xl shadow-lg aspect-square object-cover" />
           ))}
         </div>
+        {ages && ages.length > 0 && (
+          <div className="mt-6 w-full">
+            <p className="text-center font-bold text-sm text-gray-600 mb-2">Through the years ✨</p>
+            <div className="grid grid-cols-3 gap-3">
+              {ages.map((src, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={i} src={src} alt="your baby older" className="rounded-xl shadow aspect-square object-cover" />
+              ))}
+            </div>
+          </div>
+        )}
         <div className="mt-10 w-full max-w-md" data-oto>
           <p className="text-center font-bold text-lg mb-3">Make it even better 🍼</p>
           <div className="space-y-2">

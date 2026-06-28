@@ -3,7 +3,7 @@
 // DEV/TEST: in-memory. PROD (Cloudflare): swap for KV, see DEPLOY_STRIPE.md.
 // `paid` is the durable, webhook-set source of truth that a payment cleared;
 // the /api/generate gate trusts it (falling back to a live session lookup).
-type Entry = { parents: string[]; images?: string[]; createdAt: number; paid?: boolean; tier?: string; bump?: string };
+type Entry = { parents: string[]; images?: string[]; video?: string; ages?: string[]; createdAt: number; paid?: boolean; tier?: string; bump?: string };
 const g = globalThis as unknown as { __babyStore?: Map<string, Entry>; __babyEvents?: Set<string> };
 const store = g.__babyStore ?? (g.__babyStore = new Map<string, Entry>());
 // Stripe event IDs we've already fulfilled, makes webhook delivery idempotent.
@@ -37,6 +37,14 @@ export function claimEvent(id: string): boolean {
 export function setImages(token: string, images: string[]) {
   const e = store.get(token);
   if (e) e.images = images;
+}
+export function setVideo(token: string, video: string) {
+  const e = store.get(token);
+  if (e) e.video = video;
+}
+export function setAges(token: string, ages: string[]) {
+  const e = store.get(token);
+  if (e) e.ages = ages;
 }
 // Delete the source parent (biometric) photos once we're done with them. The
 // generated baby images are kept so the reveal survives a refresh. Honors the
