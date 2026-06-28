@@ -3,11 +3,13 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+// Pure time-fillers while generation runs — they do NOT change the result.
+// Framed as guesses so nobody expects the photos to match what they tapped.
 const QUESTIONS = [
-  { q: "Boy or girl?", opts: ["👦 Boy", "👧 Girl"] },
-  { q: "Whose nose wins?", opts: ["Mom's", "Dad's"] },
-  { q: "Curly or straight hair?", opts: ["Curly", "Straight"] },
-  { q: "Dimples?", opts: ["Yes!", "Nope"] },
+  { q: "Care to guess… boy or girl?", opts: ["👦 Boy", "👧 Girl"] },
+  { q: "Whose nose do you think wins?", opts: ["Mom's", "Dad's"] },
+  { q: "Curly or straight hair, you reckon?", opts: ["Curly", "Straight"] },
+  { q: "Think they'll have dimples?", opts: ["Yes!", "Nope"] },
   { q: "Who'll they look more like?", opts: ["Mom", "Dad"] },
 ];
 const FACTS = [
@@ -350,7 +352,14 @@ function Flow() {
         <p className="text-center text-xs text-gray-500">This usually takes a minute or two. Don&apos;t close this page.</p>
       </div>
 
-      <div className="mt-6 w-full min-h-[120px] flex flex-col items-center justify-center text-center">
+      {step < QUESTIONS.length && (
+        <div className="mt-6 w-full rounded-2xl bg-rose-50 ring-1 ring-rose-100 px-4 py-2.5 text-center">
+          <p className="text-xs font-bold text-rose-600">🎲 Just a fun guessing game while you wait</p>
+          <p className="text-[11px] text-gray-500 leading-snug">Your answers don&apos;t change your photos. The AI already blended both of you.</p>
+        </div>
+      )}
+
+      <div className="mt-4 w-full min-h-[120px] flex flex-col items-center justify-center text-center">
         {step < QUESTIONS.length ? (
           <>
             <p className="font-bold text-lg text-gray-900">{QUESTIONS[step].q}</p>
@@ -361,6 +370,7 @@ function Flow() {
                 </button>
               ))}
             </div>
+            <p className="mt-3 text-[11px] text-gray-400">No wrong answers! We&apos;ll show you the real result in a moment 👀</p>
           </>
         ) : (
           <>
