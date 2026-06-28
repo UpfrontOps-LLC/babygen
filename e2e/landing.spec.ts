@@ -17,14 +17,16 @@ test.describe("landing page", () => {
 
   test("assigns an A/B variant cookie and renders the matching headline", async ({ page, context }) => {
     await page.goto("/");
-    const h1 = page.locator("h1[data-variant]");
-    const variant = await h1.getAttribute("data-variant");
-    expect(variant === "A" || variant === "B").toBeTruthy();
-    await expect(h1).toHaveText(HEADLINES[variant!]);
+    // The variant is assigned in a client effect — wait for the cookie to settle
+    // before asserting, so we don't race the initial render's default.
+    await expect
+      .poll(async () => (await context.cookies()).find((c) => c.name === "bg_ab")?.value)
+      .toMatch(/^[AB]$/);
+    const ab = (await context.cookies()).find((c) => c.name === "bg_ab")!.value;
 
-    const cookies = await context.cookies();
-    const ab = cookies.find((c) => c.name === "bg_ab");
-    expect(ab?.value).toBe(variant);
+    const h1 = page.locator("h1[data-variant]");
+    await expect(h1).toHaveAttribute("data-variant", ab); // auto-retries until DOM reflects the variant
+    await expect(h1).toHaveText(HEADLINES[ab]);
   });
 
   test("shows three AI example results as conversion proof", async ({ page }) => {

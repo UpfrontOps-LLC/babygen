@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getEntry, setImages, clearParents } from "@/lib/store";
+import { getEntry, setImages, clearParents, isPaid } from "@/lib/store";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -44,11 +44,15 @@ export async function POST(req: NextRequest) {
     const { token, session_id } = await req.json();
     if (!token || !session_id) return NextResponse.json({ error: "missing params" }, { status: 400 });
 
-    // GATE: only generate if this session actually paid for this token.
-    const stripe = new Stripe(SKEY);
-    const session = await stripe.checkout.sessions.retrieve(session_id);
-    if (session.payment_status !== "paid" || session.metadata?.token !== token) {
-      return NextResponse.json({ error: "payment not verified" }, { status: 402 });
+    // GATE: only generate if payment cleared for this token. Prefer the durable
+    // webhook-set flag (no Stripe round-trip on the hot path); fall back to a
+    // live session lookup if the webhook hasn't landed yet.
+    if (!isPaid(token)) {
+      const stripe = new Stripe(SKEY);
+      const session = await stripe.checkout.sessions.retrieve(session_id);
+      if (session.payment_status !== "paid" || session.metadata?.token !== token) {
+        return NextResponse.json({ error: "payment not verified" }, { status: 402 });
+      }
     }
 
     const entry = getEntry(token);
