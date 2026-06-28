@@ -20,10 +20,22 @@ Face processing without consent = statutory damages (IL BIPA $1–5k/violation, 
 - **Do not retain** face/biometric data; **delete uploads after generation**; state retention/deletion in the Privacy Policy.
 - Bonus: this smooths ad + payment review too.
 
-## ⛔ Payment — Stripe high-risk review
-Novelty/AI/face products get flagged → holds/reserves/closure. Mitigate:
-- Clear product description, **refund/dispute policy**, support email, business identity on the site.
-- **Auto-refund on dispute** to keep dispute rate <1% (account survival).
+## Payment — Stripe DISPUTE-RATE risk (NOT a restricted-business issue)
+Verified against Stripe's Prohibited & Restricted Businesses list
+(stripe.com/restricted-businesses, checked 2026-06-28): an AI novelty / face-image
+generator is **NOT prohibited and NOT in any restricted category**. There is no
+category flag for this product. (Earlier drafts of this doc overstated this as
+"AI/face products get flagged" — that was wrong; corrected here.)
+
+The real risk is **dispute/chargeback rate**, not business type. Cold-traffic
+impulse digital buys draw "I don't recognize this charge" / buyer's-remorse
+disputes; Stripe + card-network programs (Visa VAMP, Mastercard ECP) act on
+accounts that exceed dispute thresholds (~0.65–0.9%) with reserves/holds/closure.
+Mitigate:
+- **Recognizable statement descriptor** (e.g. `SEEOURBABY`) so buyers recognize the charge.
+- Clear product description, **refund policy** (`/refunds`), support email, business identity on-site.
+- **Auto-refund borderline disputes**; submit evidence on the rest; keep dispute rate <1%.
+- (Legal, separate from Stripe) biometric photos → BIPA consent + deletion (already implemented).
 
 ## ✅ Buildable NOW — $0, no Stripe key (the loop's TOP track)
 These directly unblock revenue by getting the ad approved:

@@ -32,7 +32,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <p className="mt-2 space-x-3">
             <Link href="/privacy" className="hover:text-rose-500 underline">Privacy</Link>
             <Link href="/terms" className="hover:text-rose-500 underline">Terms</Link>
-            <a href="mailto:support@seeourbaby.com" className="hover:text-rose-500 underline">Support</a>
+            <Link href="/refunds" className="hover:text-rose-500 underline">Refund Policy</Link>
+            <a href="mailto:support@seeourbaby.com" className="hover:text-rose-500 underline">support@seeourbaby.com</a>
           </p>
           <p className="mt-2">© {new Date().getFullYear()} See Our Baby · UpfrontOps LLC</p>
         </footer>
