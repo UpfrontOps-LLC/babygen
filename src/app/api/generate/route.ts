@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getEntry, setImages } from "@/lib/store";
+import { getEntry, setImages, clearParents } from "@/lib/store";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
       images.push(`data:image/png;base64,${buf.toString("base64")}`);
     }
     setImages(token, images);
+    clearParents(token); // delete the source parent photos — keeps the deletion promise
     console.error(`[generate] DONE ${((Date.now() - t0) / 1000).toFixed(1)}s (${images.length}/${VARIANTS.length})`);
     return NextResponse.json({ images });
   } catch (e) {

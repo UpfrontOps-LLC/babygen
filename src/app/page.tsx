@@ -71,7 +71,12 @@ export default function Home() {
       >
         {busy ? "Taking you to checkout…" : !ready ? "Upload both parents to start" : !agreed ? "Tick the box to continue" : "Reveal our baby — $17.99 →"}
       </button>
-      <p className="mt-3 text-xs text-gray-400 text-center max-w-xs">
+      <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-gray-500 max-w-md text-center">
+        <span>🔒 Secure checkout · Stripe</span>
+        <span>🗑️ Photos deleted after generation</span>
+        <span>⚡ 3 HD results in ~30s</span>
+      </div>
+      <p className="mt-2 text-xs text-gray-400 text-center max-w-xs">
         AI-generated entertainment, results vary. All sales final.
       </p>
     </main>

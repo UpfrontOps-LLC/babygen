@@ -15,3 +15,10 @@ export function setImages(token: string, images: string[]) {
   const e = store.get(token);
   if (e) e.images = images;
 }
+// Delete the source parent (biometric) photos once we're done with them. The
+// generated baby images are kept so the reveal survives a refresh. Honors the
+// "photos deleted after generation" promise made at upload + in the Privacy Policy.
+export function clearParents(token: string) {
+  const e = store.get(token);
+  if (e) e.parents = [];
+}
