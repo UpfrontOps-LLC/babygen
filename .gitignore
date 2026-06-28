@@ -45,3 +45,9 @@ test-out/
 *.log
 .proof/
 .data/
+
+# playwright e2e
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
