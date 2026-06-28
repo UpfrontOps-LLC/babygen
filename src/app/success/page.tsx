@@ -25,6 +25,14 @@ const UPSELLS = [
   { id: "hd", label: "🖼️ HD + printable pack", price: 5 },
 ];
 
+const PREVIEW_IMAGES = ["/examples/baby1.png", "/examples/baby2.png", "/examples/baby3.png"];
+
+function track(event: string, data: Record<string, unknown> = {}) {
+  try {
+    fetch("/api/track", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ event, ...data }) });
+  } catch {}
+}
+
 function Flow() {
   const sp = useSearchParams();
   const [images, setImages] = useState<string[] | null>(null);
@@ -32,6 +40,7 @@ function Flow() {
   const [elapsed, setElapsed] = useState(0);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
+  const [picked, setPicked] = useState<Record<string, boolean>>({});
   const started = useRef(false);
 
   useEffect(() => {
@@ -40,8 +49,13 @@ function Flow() {
   }, []);
 
   useEffect(() => {
+    if (images) track("oto_view");
+  }, [images]);
+
+  useEffect(() => {
     if (started.current) return;
     started.current = true;
+    if (sp.get("preview") === "1") { setImages(PREVIEW_IMAGES); return; } // QA preview — example images, no payment
     const token = sp.get("token");
     const sessionId = sp.get("session_id");
     if (!token || !sessionId) { setErr("missing payment info"); return; }
@@ -76,16 +90,25 @@ function Flow() {
             <img key={i} src={src} alt="your baby" className="rounded-2xl shadow-lg aspect-square object-cover" />
           ))}
         </div>
-        <div className="mt-10 w-full max-w-md">
-          <p className="text-center font-bold text-lg mb-3">Want more? 🍼</p>
+        <div className="mt-10 w-full max-w-md" data-oto>
+          <p className="text-center font-bold text-lg mb-3">Make it even better 🍼</p>
           <div className="space-y-2">
-            {UPSELLS.map((u) => (
-              <button key={u.id} onClick={() => alert("Add-on checkout wired next")} className="w-full flex justify-between items-center bg-white rounded-xl px-4 py-3 shadow-sm hover:shadow-md transition text-left">
-                <span className="text-sm font-medium">{u.label}</span>
-                <span className="text-rose-500 font-bold">+${u.price}</span>
-              </button>
-            ))}
+            {UPSELLS.map((u) => {
+              const on = !!picked[u.id];
+              return (
+                <button
+                  key={u.id}
+                  data-oto-id={u.id}
+                  onClick={() => { setPicked((p) => ({ ...p, [u.id]: !p[u.id] })); track("oto_click", { meta: { id: u.id, price: u.price } }); }}
+                  className={`w-full flex justify-between items-center rounded-xl px-4 py-3 shadow-sm hover:shadow-md transition text-left border ${on ? "bg-rose-50 border-rose-400" : "bg-white border-transparent"}`}
+                >
+                  <span className="text-sm font-medium">{on ? "✓ " : ""}{u.label}</span>
+                  <span className="text-rose-500 font-bold">+${u.price}</span>
+                </button>
+              );
+            })}
           </div>
+          <p className="mt-3 text-center text-xs text-gray-400">One-tap add-ons charge to your card on file — live once payments are enabled.</p>
         </div>
       </div>
     );
