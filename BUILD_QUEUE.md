@@ -46,3 +46,6 @@ The real CAC/break-even verdict. Start small, scale only if it breaks even (your
 - Server pay-gate: generation refuses to run, and images refuse to release, without a Stripe-verified payment.
 - Live on a free Cloudflare quick-tunnel; builds clean.
 - Measured live generation: ~30s (29.9s gen + 0.7s teaser/download).
+
+## See UPSELLS.md — upsell flows + A/B matrix (the AOV/RPV money layer)
+Loop: build the $0 parts (upsell UIs, tier selector, order-bump UI, A/B variant harness + /api/track logging). Wire real charges when Stripe key is in.
