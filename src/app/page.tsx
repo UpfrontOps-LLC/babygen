@@ -22,6 +22,32 @@ function track(event: string, data: Record<string, unknown> = {}) {
   } catch {}
 }
 
+// Compress a photo in the browser BEFORE upload. A 7MB phone photo becomes
+// ~150KB, so checkout uploads instantly instead of hanging on the raw file.
+// Falls back to the original on any failure. 1280px keeps faces sharp for the
+// AI blend while being tiny on the wire.
+async function shrinkImage(file: File, max = 1280, quality = 0.85): Promise<File> {
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const w = Math.round(bmp.width * scale);
+    const h = Math.round(bmp.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bmp, 0, 0, w, h);
+    const blob: Blob | null = await new Promise((res) => canvas.toBlob((b) => res(b), "image/jpeg", quality));
+    return blob ? new File([blob], "photo.jpg", { type: "image/jpeg" }) : file;
+  } catch {
+    return file;
+  }
+}
+if (typeof window !== "undefined") {
+  (window as unknown as { __shrinkImage?: typeof shrinkImage }).__shrinkImage = shrinkImage;
+}
+
 export default function Home() {
   const [a, setA] = useState<File | null>(null);
   const [b, setB] = useState<File | null>(null);
@@ -175,7 +201,7 @@ function Upload({ label, file, onPick }: { label: string; file: File | null; onP
       ) : (
         <span className="text-rose-400 text-sm font-medium">+ {label}</span>
       )}
-      <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && onPick(e.target.files[0])} />
+      <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) shrinkImage(f).then(onPick); }} />
     </label>
   );
 }
