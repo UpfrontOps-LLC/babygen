@@ -16,13 +16,29 @@ export const metadata: Metadata = {
     description: "Upload two parents, see your future baby in HD. AI-generated, just for fun. 👶",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "See Our Baby — What will your baby look like?",
+    description: "Upload two parents, see your future baby in HD. AI-generated, just for fun. 👶",
+  },
+  alternates: { canonical: "/" },
   robots: { index: true, follow: true },
+};
+
+// Honest structured data only — no ratings/accuracy claims we can't back.
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "Organization", name: "See Our Baby", legalName: "UpfrontOps LLC", url: "https://seeourbaby.com", email: "support@seeourbaby.com" },
+    { "@type": "WebSite", name: "See Our Baby", url: "https://seeourbaby.com" },
+  ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         <div className="flex-1">{children}</div>
         <footer className="border-t border-rose-100 py-6 px-4 text-center text-xs text-gray-400">
           <p className="max-w-xl mx-auto">
