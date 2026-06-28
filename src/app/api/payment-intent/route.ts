@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { putParents } from "@/lib/store";
+import { emit } from "@/lib/events";
+import { recordedSeconds, tierKey } from "@/lib/gen-timing";
 
 export const runtime = "nodejs";
 
@@ -18,11 +20,12 @@ async function toDataUri(f: File): Promise<string> {
 }
 
 // Takes the two parent photos, stores them against a token, and creates a Stripe
-// Checkout session. NOTHING is generated yet, generation happens post-payment.
+// PaymentIntent for the embedded Payment Element. NOTHING is generated here;
+// generation is kicked off speculatively at the CVV moment (/api/generate-start)
+// and released after payment (/api/generate).
 export async function POST(req: NextRequest) {
-  if (!key) {
-    return NextResponse.json({ error: "stripe not configured (set STRIPE_SECRET_KEY)" }, { status: 500 });
-  }
+  if (!key) return NextResponse.json({ error: "stripe not configured (set STRIPE_SECRET_KEY)" }, { status: 500 });
+
   const form = await req.formData();
   const a = form.get("parentA");
   const b = form.get("parentB");
@@ -37,26 +40,30 @@ export async function POST(req: NextRequest) {
   const tier = String(form.get("tier") || "basic");
   const plan = TIERS[tier] ?? TIERS.basic;
   const addVideo = tier === "basic" && form.get("bump") === "1"; // order bump only on Basic
+  const bump = addVideo ? "1" : "";
   const price = plan.price + (addVideo ? 700 : 0);
   const name = addVideo ? `${plan.name} + giggle video` : plan.name;
 
   const token = crypto.randomUUID();
-  putParents(token, [await toDataUri(a), await toDataUri(b)]);
+  putParents(token, [await toDataUri(a), await toDataUri(b)], { tier, bump });
 
   const stripe = new Stripe(key);
-  const base = process.env.NEXT_PUBLIC_BASE_URL || new URL(req.url).origin;
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: [
-      {
-        quantity: 1,
-        price_data: { currency: "usd", unit_amount: price, product_data: { name } },
-      },
-    ],
-    success_url: `${base}/success?token=${token}&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: base,
-    metadata: { token, tier, bump: addVideo ? "1" : "" },
+  const intent = await stripe.paymentIntents.create({
+    amount: price,
+    currency: "usd",
+    description: name,
+    metadata: { token, tier, bump },
+    automatic_payment_methods: { enabled: true }, // card + Apple Pay / Google Pay / Link
   });
 
-  return NextResponse.json({ url: session.url });
+  emit("payment_intent_created", { token, meta: { tier, bump, amount: price } });
+
+  return NextResponse.json({
+    clientSecret: intent.client_secret,
+    token,
+    amount: price,
+    // real-length pacing for the wait screen (rule #2: no guessed timing)
+    waitSeconds: recordedSeconds(tier, bump),
+    tierKey: tierKey(tier, bump),
+  });
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
+import { emit } from "@/lib/events";
 
 export const runtime = "nodejs";
 
@@ -13,15 +14,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const event = String(body?.event || "").slice(0, 40);
     if (!event) return NextResponse.json({ ok: false, error: "no event" }, { status: 400 });
+    const meta = typeof body?.meta === "object" ? body.meta : undefined;
     const rec = {
       ts: Date.now(),
       event,
       variant: String(body?.variant || "").slice(0, 8),
       tier: String(body?.tier || "").slice(0, 16),
-      meta: typeof body?.meta === "object" ? body.meta : undefined,
+      meta,
     };
     await fs.mkdir(path.dirname(LOG), { recursive: true });
     await fs.appendFile(LOG, JSON.stringify(rec) + "\n");
+    // Mirror to the live bus so /monitor sees client-side events in real time.
+    emit(event, { token: String(body?.token || "") || undefined, meta: { ...meta, variant: rec.variant, tier: rec.tier } });
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ ok: false }, { status: 500 });

@@ -18,36 +18,41 @@ test.describe("pay-gate safety invariant (no key required)", () => {
     expect(body.images).toBeUndefined();
   });
 
-  test("/api/generate never emits images for a forged token/session", async ({ request }) => {
+  test("/api/generate never emits images for a forged token/payment_intent", async ({ request }) => {
     const res = await request.post("/api/generate", {
-      data: { token: "forged-token", session_id: "cs_test_forged" },
+      data: { token: "forged-token", payment_intent: "pi_test_forged" },
     });
     expect(res.ok()).toBeFalsy();
     const body = await res.json().catch(() => ({}));
     expect(body.images).toBeUndefined();
   });
 
-  test("/api/checkout fails closed (no redirect URL) when unconfigured", async ({ request }) => {
-    const res = await request.post("/api/checkout", { multipart: { tier: "deluxe" } });
+  test("/api/generate-start does nothing for an unknown token (no speculative gen)", async ({ request }) => {
+    const res = await request.post("/api/generate-start", { data: { token: "unknown-token" } });
+    expect(res.status()).toBe(404);
+  });
+
+  test("/api/payment-intent fails closed (no clientSecret) when sent no photos", async ({ request }) => {
+    const res = await request.post("/api/payment-intent", { multipart: { tier: "deluxe" } });
     expect(res.ok()).toBeFalsy();
     const body = await res.json().catch(() => ({}));
-    expect(body.url).toBeUndefined();
+    expect(body.clientSecret).toBeUndefined();
   });
 });
 
 test.describe("@payment real Stripe sandbox paths", () => {
   test.skip(!process.env.E2E_STRIPE, "set E2E_STRIPE=1 with a sandbox key to run");
 
-  test("checkout rejects a request with no photos (400)", async ({ request }) => {
-    const res = await request.post("/api/checkout", { multipart: { tier: "deluxe" } });
+  test("payment-intent rejects a request with no photos (400)", async ({ request }) => {
+    const res = await request.post("/api/payment-intent", { multipart: { tier: "deluxe" } });
     expect(res.status()).toBe(400);
   });
 
-  test("generate rejects an unpaid/forged session (402)", async ({ request }) => {
+  test("generate rejects an unpaid/forged payment_intent (402)", async ({ request }) => {
     const res = await request.post("/api/generate", {
-      data: { token: "forged-token", session_id: "cs_test_definitely_not_paid" },
+      data: { token: "forged-token", payment_intent: "pi_test_definitely_not_paid" },
     });
-    // 402 when the session is reachable-but-unpaid; the gate must not return 200
+    // 402 when the PI is reachable-but-unpaid; the gate must not return 200
     expect(res.status()).not.toBe(200);
     const body = await res.json().catch(() => ({}));
     expect(body.images).toBeUndefined();

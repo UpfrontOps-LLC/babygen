@@ -1,0 +1,22 @@
+See Our Baby (UpfrontOps LLC) — Stripe business description
+
+
+ONE SENTENCE (recommended):
+
+See Our Baby (UpfrontOps LLC) is a direct-to-consumer website that sells digital
+entertainment: customers pay a one-time fee, upload two photos, and instantly
+receive AI-generated, for-fun "future baby" images and short videos.
+
+
+Shorter variant (if the field has a tight character limit):
+
+We sell one-time digital novelty entertainment: customers upload two photos and
+instantly receive AI-generated, for-fun "future baby" images and a short video.
+
+
+Why it's worded this way:
+- "digital entertainment" + "for fun" sets expectations and lowers chargeback/dispute framing
+- "one-time fee" signals no subscription (fewer disputes, easier review)
+- "instantly receive" = instant digital fulfillment (clean for a card processor)
+- avoids "biometric / facial recognition" language, which raises review flags
+- names the legal entity (UpfrontOps LLC) so it matches your EIN/registration

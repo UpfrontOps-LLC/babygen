@@ -3,7 +3,7 @@ import { collectPageErrors } from "./helpers";
 
 const HEADLINES: Record<string, string> = {
   A: "What will your baby look like?",
-  B: "See your future baby in seconds.",
+  B: "See your future baby.",
 };
 
 test.describe("landing page", () => {
@@ -26,7 +26,7 @@ test.describe("landing page", () => {
 
     const h1 = page.locator("h1[data-variant]");
     await expect(h1).toHaveAttribute("data-variant", ab); // auto-retries until DOM reflects the variant
-    await expect(h1).toHaveText(HEADLINES[ab]);
+    await expect(h1).toContainText(HEADLINES[ab]); // headline + a 👶 accent span
   });
 
   test("shows three AI example results as conversion proof", async ({ page }) => {

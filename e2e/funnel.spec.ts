@@ -52,21 +52,22 @@ test.describe("pre-checkout funnel", () => {
     await expect(cta).toHaveText(/Reveal our baby for \$49/);
   });
 
-  test("submitting checkout while Stripe is unconfigured surfaces an error, not a crash", async ({ page }) => {
-    // With no STRIPE_SECRET_KEY the /api/checkout route returns 500; the UI must
-    // show the error inline and stay usable (no white screen, no navigation).
+  test("submitting reveals the EMBEDDED Stripe payment form on our page (no redirect), or errors inline, never hangs", async ({ page }) => {
+    // Configured (STRIPE_SECRET_KEY present) -> the embedded Payment Element
+    // mounts in-page (#pay + a Stripe card iframe), NO redirect off-site.
+    // Unconfigured -> inline error. Either way: no hang, no crash, stay on our origin.
     const errors = collectPageErrors(page);
     await page.goto("/");
     await uploadBothParents(page);
     await page.locator('input[aria-label="consent"]').check();
+    await page.locator("button", { hasText: /Reveal our baby/i }).click();
 
-    const cta = page.locator("button", { hasText: /Reveal our baby/i });
-    await cta.click();
-
-    // we stay on the funnel page and an error message renders
-    await expect(page).toHaveURL(/\/$|localhost/);
-    await expect(page.getByText(/unavailable|try again/i)).toBeVisible();
-    // no uncaught exceptions from the failed fetch
+    await Promise.race([
+      page.locator("#pay").waitFor({ state: "visible", timeout: 20000 }),
+      page.getByText(/unavailable|try again/i).waitFor({ timeout: 20000 }),
+    ]);
+    // we never leave our own origin (embedded, not hosted checkout)
+    expect(page.url()).not.toMatch(/checkout\.stripe\.com/);
     expect(errors.filter((e) => e.startsWith("pageerror")), errors.join("\n")).toEqual([]);
   });
 });

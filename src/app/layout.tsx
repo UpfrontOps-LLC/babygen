@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"),
   title: "See Our Baby | AI Future Baby Generator",
   description:
-    "Upload a photo of each parent and our AI imagines what your future baby could look like, just for fun, in seconds.",
+    "Upload a photo of each parent and our AI imagines what your future baby could look like, just for fun, in about a minute.",
   openGraph: {
     title: "See Our Baby: What will your baby look like?",
     description: "Upload two parents, see your future baby in HD. AI-generated, just for fun. 👶",

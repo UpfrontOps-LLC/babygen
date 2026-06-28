@@ -41,6 +41,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true, deduped: true });
   }
 
+  // The embedded Payment Element pays via PaymentIntent; this is the durable
+  // confirmation that survives the customer closing the tab post-payment.
+  if (event.type === "payment_intent.succeeded") {
+    const pi = event.data.object as Stripe.PaymentIntent;
+    const token = pi.metadata?.token;
+    if (token) {
+      markPaid(token, { tier: pi.metadata?.tier, bump: pi.metadata?.bump });
+      console.error(`[webhook] PAID (pi) token=${token.slice(0, 8)} tier=${pi.metadata?.tier} bump=${pi.metadata?.bump || "-"}`);
+    }
+  }
+
+  // Legacy hosted-Checkout path (kept harmless for any in-flight sessions).
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const token = session.metadata?.token;

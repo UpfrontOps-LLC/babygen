@@ -3,14 +3,14 @@
 // DEV/TEST: in-memory. PROD (Cloudflare): swap for KV, see DEPLOY_STRIPE.md.
 // `paid` is the durable, webhook-set source of truth that a payment cleared;
 // the /api/generate gate trusts it (falling back to a live session lookup).
-type Entry = { parents: string[]; images?: string[]; video?: string; ages?: string[]; createdAt: number; paid?: boolean; tier?: string; bump?: string };
+type Entry = { parents: string[]; images?: string[]; video?: string; ages?: string[]; createdAt: number; paid?: boolean; tier?: string; bump?: string; generating?: boolean };
 const g = globalThis as unknown as { __babyStore?: Map<string, Entry>; __babyEvents?: Set<string> };
 const store = g.__babyStore ?? (g.__babyStore = new Map<string, Entry>());
 // Stripe event IDs we've already fulfilled, makes webhook delivery idempotent.
 const seen = g.__babyEvents ?? (g.__babyEvents = new Set<string>());
 
-export function putParents(token: string, parents: string[]) {
-  store.set(token, { parents, createdAt: Date.now() });
+export function putParents(token: string, parents: string[], meta?: { tier?: string; bump?: string }) {
+  store.set(token, { parents, createdAt: Date.now(), tier: meta?.tier, bump: meta?.bump });
 }
 export function getEntry(token: string): Entry | null {
   return store.get(token) ?? null;
@@ -33,6 +33,20 @@ export function claimEvent(id: string): boolean {
   if (seen.has(id)) return false;
   seen.add(id);
   return true;
+}
+// Idempotency for speculative early-gen (CVV-focus may fire generate-start more
+// than once, and /api/generate may also race it): returns true for the FIRST
+// caller of a token — who should actually run generation — and false for every
+// caller after, until images land. Prevents double Replicate spend / double work.
+export function claimGenerate(token: string): boolean {
+  const e = store.get(token);
+  if (!e) return false;
+  if (e.generating || e.images) return false;
+  e.generating = true;
+  return true;
+}
+export function isGenerating(token: string): boolean {
+  return store.get(token)?.generating === true;
 }
 export function setImages(token: string, images: string[]) {
   const e = store.get(token);
