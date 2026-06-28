@@ -58,3 +58,14 @@ export function tierKey(tier: string, bump = ""): string {
   if (wantsVideo(tier, bump)) return tier === "deluxe" ? "deluxe" : "basic+bump";
   return "basic";
 }
+
+// Real-length wait for a post-purchase add-on bundle, same deterministic seeds.
+export function addonWaitSeconds(addons: string[]): number {
+  let s = 0;
+  if (addons.includes("video")) s += SEED.video; // 1 seedance video
+  if (addons.includes("ages")) s += SEED.imageWall; // 3 parallel images
+  if (addons.includes("gender")) s += SEED.imageWall; // boy + girl images
+  if (addons.includes("twins")) s += SEED.image; // 1 image
+  if (addons.includes("hd")) s += SEED.imageWall; // re-render at 2K
+  return Math.round(s * 10) / 10;
+}

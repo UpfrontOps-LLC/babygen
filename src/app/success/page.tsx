@@ -34,6 +34,59 @@ function track(event: string, data: Record<string, unknown> = {}) {
   } catch {}
 }
 
+// --- saving the goods: works for both data: URIs (real gen) and /cache paths ---
+async function asBlob(src: string): Promise<Blob> {
+  const res = await fetch(src);
+  return res.blob();
+}
+function extFor(blob: Blob): string {
+  if (blob.type.includes("png")) return "png";
+  if (blob.type.includes("webp")) return "webp";
+  if (blob.type.includes("mp4")) return "mp4";
+  return "jpg";
+}
+async function downloadOne(src: string, filename: string) {
+  try {
+    const blob = await asBlob(src);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 8000);
+  } catch {
+    // mobile fallback: open it so the user can long-press → Save
+    window.open(src, "_blank");
+  }
+}
+async function downloadMany(items: { src: string; name: string }[]) {
+  for (const it of items) {
+    await downloadOne(it.src, it.name);
+    await new Promise((r) => setTimeout(r, 350)); // let each save settle on mobile
+  }
+}
+// Native share sheet (Instagram/TikTok/Messages) on mobile. Returns false if unsupported.
+async function shareImages(srcs: string[]): Promise<boolean> {
+  try {
+    const files = await Promise.all(
+      srcs.map(async (s, i) => {
+        const blob = await asBlob(s);
+        return new File([blob], `our-baby-${i + 1}.${extFor(blob)}`, { type: blob.type || "image/jpeg" });
+      })
+    );
+    const nav = navigator as Navigator & { canShare?: (d?: unknown) => boolean };
+    if (nav.canShare && nav.canShare({ files }) && nav.share) {
+      await nav.share({ files, title: "Our future baby 👶", text: "We made our future baby with See Our Baby 👶✨" });
+      return true;
+    }
+  } catch {
+    /* user cancelled or unsupported → caller falls back to download */
+  }
+  return false;
+}
+
 function Flow() {
   const sp = useSearchParams();
   const [images, setImages] = useState<string[] | null>(null);
@@ -44,6 +97,10 @@ function Flow() {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
+  const [buying, setBuying] = useState(false);
+  const [bought, setBought] = useState<Set<string>>(new Set());
+  const [extras, setExtras] = useState<string[]>([]);
+  const [upsellErr, setUpsellErr] = useState<string | null>(null);
   const started = useRef(false);
 
   useEffect(() => {
@@ -69,6 +126,36 @@ function Flow() {
       .catch(() => setErr("something went wrong"));
   }, [sp]);
 
+  // One-click upsell: charge the card already on file (no re-entry), then merge
+  // the new deliverables straight into the reveal.
+  async function buyAddons() {
+    const ids = Object.keys(picked).filter((k) => picked[k] && !bought.has(k));
+    if (ids.length === 0 || buying) return;
+    const token = sp.get("token");
+    const paymentIntent = sp.get("payment_intent");
+    if (!token || !paymentIntent) { setUpsellErr("We couldn't find your order. Refresh and try again."); return; }
+    setBuying(true); setUpsellErr(null);
+    track("upsell_buy", { token, meta: { addons: ids } });
+    try {
+      const r = await fetch("/api/upsell", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, payment_intent: paymentIntent, addons: ids }) });
+      const d = await r.json();
+      if (d.ok) {
+        if (d.media?.video) setVideo(d.media.video);
+        if (d.media?.ages) setAges(d.media.ages);
+        if (d.media?.extras?.length) setExtras((e) => [...e, ...d.media.extras]);
+        setBought((b) => new Set([...b, ...d.addons]));
+        setPicked({});
+        track("upsell_success", { token, meta: { addons: d.addons, amount: d.amount } });
+      } else {
+        setUpsellErr(d.error || "That didn't go through. Please try again.");
+      }
+    } catch {
+      setUpsellErr("That didn't go through. Please try again.");
+    } finally {
+      setBuying(false);
+    }
+  }
+
   if (err)
     return (
       <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl ring-1 ring-black/5 text-center">
@@ -85,16 +172,58 @@ function Flow() {
       <div className="w-full max-w-2xl flex flex-col items-center">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-center text-gray-900">Meet your baby 🎉</h1>
         {guess && <p className="mt-2 text-rose-600 font-semibold">You guessed a {guess}, here&apos;s the truth 👀</p>}
+        <p className="mt-1 text-sm text-gray-500">Yours to keep — save them or share with family 💕</p>
+
+        {/* primary actions: the whole point after paying — get your photos */}
+        <div className="mt-5 flex flex-col sm:flex-row gap-3 w-full max-w-md">
+          <button
+            onClick={() => {
+              track("download_all");
+              const list = [
+                ...images.map((s, i) => ({ src: s, name: `our-baby-${i + 1}.png` })),
+                ...(ages || []).map((s, i) => ({ src: s, name: `our-baby-age-${i + 1}.png` })),
+              ];
+              downloadMany(list);
+            }}
+            className="flex-1 px-6 py-3.5 rounded-full bg-gradient-to-r from-rose-500 to-pink-600 text-white font-black shadow-lg shadow-rose-500/30 hover:brightness-105 active:scale-95 transition"
+          >
+            📥 Save all photos
+          </button>
+          <button
+            onClick={async () => {
+              track("share_click");
+              const ok = await shareImages(images);
+              if (!ok) downloadMany(images.map((s, i) => ({ src: s, name: `our-baby-${i + 1}.png` })));
+            }}
+            className="flex-1 px-6 py-3.5 rounded-full bg-white text-gray-900 font-black shadow-lg ring-1 ring-black/10 hover:bg-gray-50 active:scale-95 transition"
+          >
+            📲 Share
+          </button>
+        </div>
 
         {video && (
-          // eslint-disable-next-line jsx-a11y/media-has-caption
-          <video src={video} autoPlay muted playsInline controls className="mt-6 w-full max-w-xs sm:max-w-sm rounded-3xl shadow-xl ring-1 ring-black/5" />
+          <div className="mt-6 flex flex-col items-center w-full">
+            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+            <video src={video} autoPlay muted playsInline controls className="w-full max-w-xs sm:max-w-sm rounded-3xl shadow-xl ring-1 ring-black/5" />
+            <button onClick={() => { track("download_video"); downloadOne(video, "our-baby-video.mp4"); }} className="mt-3 px-5 py-2.5 rounded-full bg-gray-900 text-white text-sm font-bold shadow hover:bg-gray-800 active:scale-95 transition">
+              📥 Save video
+            </button>
+          </div>
         )}
 
         <div className="mt-5 grid grid-cols-3 gap-2.5 sm:gap-3 w-full">
           {images.map((src, i) => (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img key={i} src={src} alt="your baby" className="rounded-2xl sm:rounded-3xl shadow-lg ring-1 ring-black/5 aspect-square object-cover w-full" />
+            <div key={i} className="relative group">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt="your baby" className="rounded-2xl sm:rounded-3xl shadow-lg ring-1 ring-black/5 aspect-square object-cover w-full" />
+              <button
+                onClick={() => { track("download_one", { meta: { i } }); downloadOne(src, `our-baby-${i + 1}.png`); }}
+                aria-label="save this photo"
+                className="absolute bottom-1.5 right-1.5 h-9 w-9 flex items-center justify-center rounded-full bg-white/90 backdrop-blur text-base shadow-md ring-1 ring-black/10 active:scale-90 transition"
+              >
+                ⬇️
+              </button>
+            </div>
           ))}
         </div>
 
@@ -103,33 +232,97 @@ function Flow() {
             <p className="text-center font-bold text-base text-gray-800 mb-3">Through the years ✨</p>
             <div className="grid grid-cols-3 gap-3">
               {ages.map((src, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={i} src={src} alt="your baby older" className="rounded-2xl shadow-md ring-1 ring-black/5 aspect-square object-cover w-full" />
+                <div key={i} className="relative group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="your baby older" className="rounded-2xl shadow-md ring-1 ring-black/5 aspect-square object-cover w-full" />
+                  <button
+                    onClick={() => { track("download_age", { meta: { i } }); downloadOne(src, `our-baby-age-${i + 1}.png`); }}
+                    aria-label="save this photo"
+                    className="absolute bottom-1.5 right-1.5 h-8 w-8 flex items-center justify-center rounded-full bg-white/90 backdrop-blur text-sm shadow-md ring-1 ring-black/10 active:scale-90 transition"
+                  >
+                    ⬇️
+                  </button>
+                </div>
               ))}
             </div>
           </div>
         )}
 
-        <div className="mt-10 w-full max-w-md rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5" data-oto>
-          <p className="text-center font-extrabold text-lg text-gray-900 mb-1">Make it even better 🍼</p>
-          <p className="text-center text-xs text-gray-500 mb-4">More add-ons coming soon.</p>
-          <div className="space-y-2.5">
-            {UPSELLS.map((u) => {
-              const on = !!picked[u.id];
-              return (
-                <button
-                  key={u.id}
-                  data-oto-id={u.id}
-                  onClick={() => { setPicked((p) => ({ ...p, [u.id]: !p[u.id] })); track("oto_click", { meta: { id: u.id, price: u.price } }); }}
-                  className={`w-full flex justify-between items-center rounded-2xl px-4 py-3.5 text-left border-2 transition ${on ? "bg-rose-50 border-rose-500 shadow-md" : "bg-gray-50 border-transparent hover:border-rose-200 hover:bg-white"}`}
-                >
-                  <span className="text-sm font-semibold text-gray-900">{on ? "✓ " : ""}{u.label}</span>
-                  <span className="text-rose-600 font-extrabold whitespace-nowrap">+${u.price}</span>
-                </button>
-              );
-            })}
+        {extras.length > 0 && (
+          <div className="mt-8 w-full">
+            <p className="text-center font-bold text-base text-gray-800 mb-3">Your add-ons ✨</p>
+            <div className="grid grid-cols-3 gap-3">
+              {extras.map((src, i) => (
+                <div key={i} className="relative group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="your baby add-on" className="rounded-2xl shadow-md ring-1 ring-black/5 aspect-square object-cover w-full" />
+                  <button
+                    onClick={() => { track("download_extra", { meta: { i } }); downloadOne(src, `our-baby-extra-${i + 1}.png`); }}
+                    aria-label="save this photo"
+                    className="absolute bottom-1.5 right-1.5 h-8 w-8 flex items-center justify-center rounded-full bg-white/90 backdrop-blur text-sm shadow-md ring-1 ring-black/10 active:scale-90 transition"
+                  >
+                    ⬇️
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {(() => {
+          const open = UPSELLS.filter((u) => !bought.has(u.id));
+          const selected = open.filter((u) => picked[u.id]);
+          const total = selected.reduce((s, u) => s + u.price, 0);
+          if (open.length === 0)
+            return (
+              <div className="mt-10 w-full max-w-md rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5 text-center" data-oto>
+                <p className="font-extrabold text-lg text-gray-900">You&apos;ve got it all 🎉</p>
+                <p className="mt-1 text-sm text-gray-500">Every add-on is unlocked. Enjoy your little one 💕</p>
+              </div>
+            );
+          return (
+            <div className="mt-10 w-full max-w-md rounded-3xl bg-white p-5 shadow-xl ring-1 ring-black/5" data-oto>
+              <p className="text-center font-extrabold text-lg text-gray-900 mb-1">Make it even better 🍼</p>
+              <p className="text-center text-xs text-gray-500 mb-4">One tap, charged to the card you just used.</p>
+              <div className="space-y-2.5">
+                {bought.size > 0 && UPSELLS.filter((u) => bought.has(u.id)).map((u) => (
+                  <div key={u.id} className="w-full flex justify-between items-center rounded-2xl px-4 py-3 border-2 border-green-200 bg-green-50">
+                    <span className="text-sm font-semibold text-green-800">✓ {u.label}</span>
+                    <span className="text-green-700 font-bold text-sm whitespace-nowrap">Added</span>
+                  </div>
+                ))}
+                {open.map((u) => {
+                  const on = !!picked[u.id];
+                  return (
+                    <button
+                      key={u.id}
+                      data-oto-id={u.id}
+                      disabled={buying}
+                      onClick={() => { setPicked((p) => ({ ...p, [u.id]: !p[u.id] })); track("oto_click", { meta: { id: u.id, price: u.price } }); }}
+                      className={`w-full flex justify-between items-center rounded-2xl px-4 py-3.5 text-left border-2 transition disabled:opacity-60 ${on ? "bg-rose-50 border-rose-500 shadow-md" : "bg-gray-50 border-transparent hover:border-rose-200 hover:bg-white"}`}
+                    >
+                      <span className="text-sm font-semibold text-gray-900">{on ? "✓ " : ""}{u.label}</span>
+                      <span className="text-rose-600 font-extrabold whitespace-nowrap">+${u.price}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {upsellErr && <p className="mt-3 text-center text-sm font-semibold text-red-500">{upsellErr}</p>}
+
+              <button
+                data-oto-buy
+                onClick={buyAddons}
+                disabled={selected.length === 0 || buying}
+                className="mt-4 w-full px-6 py-3.5 rounded-full bg-gradient-to-r from-rose-500 to-pink-600 text-white font-black shadow-lg shadow-rose-500/30 disabled:opacity-40 disabled:shadow-none hover:brightness-105 active:scale-[0.99] transition"
+              >
+                {buying ? "Adding to your order…" : selected.length === 0 ? "Pick an add-on above" : `Add ${selected.length > 1 ? selected.length + " add-ons" : "this"} for $${total / 100 % 1 === 0 ? total / 100 : (total / 100).toFixed(2)} →`}
+              </button>
+              {buying && <p className="mt-2 text-center text-xs text-gray-500">Charging your saved card and creating them now…</p>}
+              {!buying && <p className="mt-2 text-center text-xs text-gray-400">🔒 No need to re-enter your card</p>}
+            </div>
+          );
+        })()}
       </div>
     );
   }

@@ -54,5 +54,19 @@ test.describe("embedded payment + CVV-triggered early-gen", () => {
 
     // the reveal eventually shows the baby (cached output after the real wait)
     await expect(page.locator('img[alt="your baby"]').first()).toBeVisible({ timeout: 150_000 });
+
+    // --- one-click upsell: a Basic order has no video; add it with the saved card ---
+    await expect(page.locator("video")).toHaveCount(0);
+    await page.locator('[data-oto-id="video"]').click();
+    const buy = page.locator("[data-oto-buy]");
+    await expect(buy).toBeEnabled();
+    await buy.click();
+    // charges the card already on file (no re-entry) + generates -> the video appears
+    await expect(page.locator("video")).toBeVisible({ timeout: 120_000 });
+
+    // and the upsell charge actually happened
+    const after = await (await page.request.get("/api/events")).json();
+    const upsellPaid = after.events.find((e: { event: string }) => e.event === "upsell_paid");
+    expect(upsellPaid, "upsell_paid event should have fired").toBeTruthy();
   });
 });

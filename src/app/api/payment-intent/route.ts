@@ -48,10 +48,15 @@ export async function POST(req: NextRequest) {
   putParents(token, [await toDataUri(a), await toDataUri(b)], { tier, bump });
 
   const stripe = new Stripe(key);
+  // A customer + setup_future_usage saves the card so the post-purchase one-click
+  // upsell can charge it again without re-entering details (/api/upsell).
+  const customer = await stripe.customers.create({ metadata: { token } });
   const intent = await stripe.paymentIntents.create({
     amount: price,
     currency: "usd",
     description: name,
+    customer: customer.id,
+    setup_future_usage: "on_session",
     metadata: { token, tier, bump },
     automatic_payment_methods: { enabled: true }, // card + Apple Pay / Google Pay / Link
   });

@@ -11,7 +11,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { getEntry, setImages, setVideo, setAges, clearParents, claimGenerate } from "@/lib/store";
 import { emit } from "@/lib/events";
-import { recordedSeconds, wantsVideo, wantsAges, tierKey } from "@/lib/gen-timing";
+import { recordedSeconds, wantsVideo, wantsAges, tierKey, addonWaitSeconds } from "@/lib/gen-timing";
 
 const TOKEN = process.env.REPLICATE_API_TOKEN;
 const REAL_GEN = process.env.REAL_GEN === "1";
@@ -155,6 +155,67 @@ async function runPipeline(token: string): Promise<GenResult> {
   console.error(`[generate] DONE ${secs}s img=${images.length} video=${!!video} ages=${ages?.length || 0}`);
   emit("generate_done", { token, meta: { tier, real: true, secs } });
   return { images, video, ages };
+}
+
+const AGE_PROMPTS = AGE_VARIANTS;
+const GENDER_PROMPTS = [
+  "an adorable baby boy about 12 months old, clearly a boy, bright eyes, soft smile",
+  "an adorable baby girl about 12 months old, clearly a girl, bright eyes, wispy hair",
+];
+const TWIN_PROMPT = "adorable twin babies about 12 months old sitting together, two babies, matching features, giggling";
+
+export type AddonMedia = { video?: string; ages?: string[]; extras?: string[] };
+
+// Post-purchase add-ons (/api/upsell). Cached gate (default) waits the real
+// add-on duration then serves cached outputs — zero Replicate spend, honest UX.
+// Real gate (REAL_GEN=1) is best-effort: the source parent photos are deleted
+// right after the first generation (privacy promise), so image-based add-ons
+// can only run if parents are still present; video derives from the kept baby image.
+export async function generateAddons(token: string, addons: string[]): Promise<AddonMedia> {
+  const entry = getEntry(token);
+  if (!entry) throw new Error("session expired");
+  emit("upsell_generate_start", { token, meta: { addons, real: REAL_GEN } });
+  const t0 = Date.now();
+  const out: AddonMedia = {};
+
+  if (!REAL_GEN) {
+    await sleep(addonWaitSeconds(addons) * 1000);
+    if (addons.includes("video")) { out.video = CACHE.video; setVideo(token, out.video); }
+    if (addons.includes("ages")) { out.ages = CACHE.ages; setAges(token, out.ages); }
+    const extras: string[] = [];
+    if (addons.includes("gender")) extras.push(CACHE.images[0], CACHE.images[1]);
+    if (addons.includes("twins")) extras.push(CACHE.images[2]);
+    if (addons.includes("hd")) extras.push(...CACHE.images);
+    if (extras.length) out.extras = extras;
+    emit("upsell_generate_done", { token, meta: { addons, cached: true, secs: +((Date.now() - t0) / 1000).toFixed(1) } });
+    return out;
+  }
+
+  // REAL gate (owner-authorized). Best-effort given privacy deletion of parents.
+  const parents = entry.parents;
+  const haveParents = parents && parents.length > 0;
+  if (addons.includes("video") && entry.images?.[0]) {
+    try { out.video = await generateVideo(entry.images[0]); setVideo(token, out.video); } catch (e) { console.error("[upsell] video failed:", e); }
+  }
+  if (haveParents) {
+    const extras: string[] = [];
+    if (addons.includes("ages")) {
+      const s = await Promise.allSettled(AGE_PROMPTS.map((v) => generateImage(blendPrompt(v), parents)));
+      const au = s.filter(fulfilled).map((r) => r.value); if (au.length) { out.ages = []; for (const u of au) out.ages.push(await toDataUri(u)); setAges(token, out.ages); }
+    }
+    if (addons.includes("gender")) {
+      const s = await Promise.allSettled(GENDER_PROMPTS.map((v) => generateImage(blendPrompt(v), parents)));
+      for (const r of s) if (r.status === "fulfilled") extras.push(await toDataUri(r.value));
+    }
+    if (addons.includes("twins")) {
+      try { extras.push(await toDataUri(await generateImage(blendPrompt(TWIN_PROMPT), parents))); } catch (e) { console.error("[upsell] twins failed:", e); }
+    }
+    if (extras.length) out.extras = extras;
+  } else if (addons.some((a) => ["ages", "gender", "twins", "hd"].includes(a))) {
+    console.error("[upsell] image add-ons need parent photos, which were deleted post-generation — skipped in real mode");
+  }
+  emit("upsell_generate_done", { token, meta: { addons, real: true, secs: +((Date.now() - t0) / 1000).toFixed(1) } });
+  return out;
 }
 
 // Speculative early-gen: fired at the CVV moment. Claims the token then runs the
