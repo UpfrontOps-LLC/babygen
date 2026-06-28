@@ -36,6 +36,9 @@ export async function POST(req: NextRequest) {
 
   const tier = String(form.get("tier") || "basic");
   const plan = TIERS[tier] ?? TIERS.basic;
+  const addVideo = tier === "basic" && form.get("bump") === "1"; // order bump only on Basic
+  const price = plan.price + (addVideo ? 700 : 0);
+  const name = addVideo ? `${plan.name} + giggle video` : plan.name;
 
   const token = crypto.randomUUID();
   putParents(token, [await toDataUri(a), await toDataUri(b)]);
@@ -47,12 +50,12 @@ export async function POST(req: NextRequest) {
     line_items: [
       {
         quantity: 1,
-        price_data: { currency: "usd", unit_amount: plan.price, product_data: { name: plan.name } },
+        price_data: { currency: "usd", unit_amount: price, product_data: { name } },
       },
     ],
     success_url: `${base}/success?token=${token}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: base,
-    metadata: { token, tier },
+    metadata: { token, tier, bump: addVideo ? "1" : "" },
   });
 
   return NextResponse.json({ url: session.url });

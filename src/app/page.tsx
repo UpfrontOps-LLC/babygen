@@ -18,8 +18,11 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
   const [tier, setTier] = useState<string>("deluxe");
+  const [bump, setBump] = useState(false);
 
   const selected = TIERS.find((t) => t.id === tier) ?? TIERS[1];
+  const showBump = tier === "basic"; // Deluxe/Ultimate already include video — don't sell it twice
+  const total = selected.price + (showBump && bump ? 700 : 0);
 
   async function checkout() {
     if (!a || !b) return;
@@ -30,6 +33,7 @@ export default function Home() {
       fd.append("parentA", a);
       fd.append("parentB", b);
       fd.append("tier", tier);
+      fd.append("bump", bump ? "1" : "");
       const res = await fetch("/api/checkout", { method: "POST", body: fd });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
@@ -84,6 +88,14 @@ export default function Home() {
         </div>
       )}
 
+      {ready && showBump && (
+        <label data-bump className="mt-5 flex items-center gap-2 w-full max-w-md text-sm cursor-pointer bg-white border border-rose-200 rounded-xl px-4 py-3 shadow-sm">
+          <input type="checkbox" checked={bump} onChange={(e) => setBump(e.target.checked)} aria-label="bump" />
+          <span className="flex-1">🎥 Add a giggling <strong>video</strong> of your baby</span>
+          <span className="text-rose-500 font-bold">+$7</span>
+        </label>
+      )}
+
       {ready && (
         <label className="mt-6 flex items-start gap-2 max-w-md text-xs text-gray-500 cursor-pointer">
           <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5" aria-label="consent" />
@@ -101,7 +113,7 @@ export default function Home() {
         onClick={checkout}
         className="mt-6 px-8 py-4 rounded-full bg-rose-500 text-white text-lg font-bold shadow-lg disabled:opacity-40 hover:bg-rose-600 transition"
       >
-        {busy ? "Taking you to checkout…" : !ready ? "Upload both parents to start" : !agreed ? "Tick the box to continue" : `Reveal our baby — ${fmt(selected.price)} →`}
+        {busy ? "Taking you to checkout…" : !ready ? "Upload both parents to start" : !agreed ? "Tick the box to continue" : `Reveal our baby — ${fmt(total)} →`}
       </button>
       <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-gray-500 max-w-md text-center">
         <span>🔒 Secure checkout · Stripe</span>
