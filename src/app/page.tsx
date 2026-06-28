@@ -2,12 +2,24 @@
 
 import { useState } from "react";
 
+type Tier = { id: string; price: number; label: string; blurb: string; badge?: string };
+const TIERS: Tier[] = [
+  { id: "basic", price: 1799, label: "Basic", blurb: "3 HD baby photos" },
+  { id: "deluxe", price: 2900, label: "Deluxe", blurb: "3 HD photos + a giggle video 🎥", badge: "Most popular" },
+  { id: "ultimate", price: 4900, label: "Ultimate", blurb: "+ ages 5 / 10 / 18 + printable HD" },
+];
+
+const fmt = (cents: number) => `$${(cents / 100).toFixed(2).replace(/\.00$/, "")}`;
+
 export default function Home() {
   const [a, setA] = useState<File | null>(null);
   const [b, setB] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
+  const [tier, setTier] = useState<string>("deluxe");
+
+  const selected = TIERS.find((t) => t.id === tier) ?? TIERS[1];
 
   async function checkout() {
     if (!a || !b) return;
@@ -17,6 +29,7 @@ export default function Home() {
       const fd = new FormData();
       fd.append("parentA", a);
       fd.append("parentB", b);
+      fd.append("tier", tier);
       const res = await fetch("/api/checkout", { method: "POST", body: fd });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
@@ -43,12 +56,31 @@ export default function Home() {
         <Upload label="Parent 2" file={b} onPick={setB} />
       </div>
 
-      {/* $0 teaser card — builds desire without generating anything */}
+      {/* good-better-best tier selector (anchored on Deluxe) */}
       {ready && (
-        <div className="mt-8 w-full max-w-md rounded-3xl bg-gradient-to-br from-rose-200 to-pink-300 p-8 flex flex-col items-center text-center shadow-lg">
-          <div className="text-6xl blur-sm select-none">👶</div>
-          <p className="mt-3 font-bold text-white text-lg drop-shadow">🔒 Your future baby is ready</p>
-          <p className="text-white/90 text-sm">3 HD reveals · in ~30 seconds</p>
+        <div className="mt-8 w-full max-w-md grid grid-cols-3 gap-2" role="radiogroup" aria-label="package">
+          {TIERS.map((t) => {
+            const active = t.id === tier;
+            return (
+              <button
+                key={t.id}
+                role="radio"
+                aria-checked={active}
+                data-tier={t.id}
+                onClick={() => setTier(t.id)}
+                className={`relative rounded-2xl border-2 p-3 text-left transition ${active ? "border-rose-500 bg-rose-50 shadow-md" : "border-rose-100 bg-white hover:border-rose-300"}`}
+              >
+                {t.badge && (
+                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">
+                    {t.badge}
+                  </span>
+                )}
+                <div className="font-bold text-sm">{t.label}</div>
+                <div className="text-rose-500 font-extrabold">{fmt(t.price)}</div>
+                <div className="text-[11px] text-gray-500 mt-1 leading-tight">{t.blurb}</div>
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -69,12 +101,12 @@ export default function Home() {
         onClick={checkout}
         className="mt-6 px-8 py-4 rounded-full bg-rose-500 text-white text-lg font-bold shadow-lg disabled:opacity-40 hover:bg-rose-600 transition"
       >
-        {busy ? "Taking you to checkout…" : !ready ? "Upload both parents to start" : !agreed ? "Tick the box to continue" : "Reveal our baby — $17.99 →"}
+        {busy ? "Taking you to checkout…" : !ready ? "Upload both parents to start" : !agreed ? "Tick the box to continue" : `Reveal our baby — ${fmt(selected.price)} →`}
       </button>
       <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-gray-500 max-w-md text-center">
         <span>🔒 Secure checkout · Stripe</span>
         <span>🗑️ Photos deleted after generation</span>
-        <span>⚡ 3 HD results in ~30s</span>
+        <span>⚡ HD results in ~30s</span>
       </div>
       <p className="mt-2 text-xs text-gray-400 text-center max-w-xs">
         AI-generated entertainment, results vary. All sales final.

@@ -5,7 +5,11 @@ import { putParents } from "@/lib/store";
 export const runtime = "nodejs";
 
 const key = process.env.STRIPE_SECRET_KEY;
-const PRICE = parseInt(process.env.PRICE_CENTS || "1799", 10);
+const TIERS: Record<string, { price: number; name: string }> = {
+  basic: { price: 1799, name: "Your AI Baby — Basic (3 HD photos)" },
+  deluxe: { price: 2900, name: "Your AI Baby — Deluxe (3 HD photos + giggle video)" },
+  ultimate: { price: 4900, name: "Your AI Baby — Ultimate (photos + age progression + HD)" },
+};
 
 async function toDataUri(f: File): Promise<string> {
   const buf = Buffer.from(await f.arrayBuffer());
@@ -30,6 +34,9 @@ export async function POST(req: NextRequest) {
     if (f.size > 25_000_000) return NextResponse.json({ error: "photo too large (max 25MB)" }, { status: 400 });
   }
 
+  const tier = String(form.get("tier") || "basic");
+  const plan = TIERS[tier] ?? TIERS.basic;
+
   const token = crypto.randomUUID();
   putParents(token, [await toDataUri(a), await toDataUri(b)]);
 
@@ -40,12 +47,12 @@ export async function POST(req: NextRequest) {
     line_items: [
       {
         quantity: 1,
-        price_data: { currency: "usd", unit_amount: PRICE, product_data: { name: "Your AI Baby — 3 HD reveals" } },
+        price_data: { currency: "usd", unit_amount: plan.price, product_data: { name: plan.name } },
       },
     ],
     success_url: `${base}/success?token=${token}&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: base,
-    metadata: { token },
+    metadata: { token, tier },
   });
 
   return NextResponse.json({ url: session.url });
