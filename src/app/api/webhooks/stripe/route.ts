@@ -26,18 +26,19 @@ export async function POST(req: NextRequest) {
   if (!sig) return NextResponse.json({ error: "missing signature" }, { status: 400 });
 
   const raw = await req.text();
-  const stripe = new Stripe(SKEY);
+  const stripe = new Stripe(SKEY, { httpClient: Stripe.createFetchHttpClient() });
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(raw, sig, WHSEC);
+    // Workers crypto is async — constructEventAsync, not constructEvent.
+    event = await stripe.webhooks.constructEventAsync(raw, sig, WHSEC);
   } catch (e) {
     // Bad signature → reject. Do NOT trust the payload.
     return NextResponse.json({ error: `signature verification failed: ${e instanceof Error ? e.message : "?"}` }, { status: 400 });
   }
 
   // Dedupe redeliveries before doing any fulfillment work.
-  if (!claimEvent(event.id)) {
+  if (!(await claimEvent(event.id))) {
     return NextResponse.json({ received: true, deduped: true });
   }
 
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
     const pi = event.data.object as Stripe.PaymentIntent;
     const token = pi.metadata?.token;
     if (token) {
-      markPaid(token, { tier: pi.metadata?.tier, bump: pi.metadata?.bump });
+      await markPaid(token, { tier: pi.metadata?.tier, bump: pi.metadata?.bump });
       console.error(`[webhook] PAID (pi) token=${token.slice(0, 8)} tier=${pi.metadata?.tier} bump=${pi.metadata?.bump || "-"}`);
     }
   }
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
     const session = event.data.object as Stripe.Checkout.Session;
     const token = session.metadata?.token;
     if (session.payment_status === "paid" && token) {
-      markPaid(token, { tier: session.metadata?.tier, bump: session.metadata?.bump });
+      await markPaid(token, { tier: session.metadata?.tier, bump: session.metadata?.bump });
       console.error(`[webhook] PAID token=${token.slice(0, 8)} tier=${session.metadata?.tier} bump=${session.metadata?.bump || "-"}`);
     }
   }

@@ -26,17 +26,22 @@ export default function Monitor() {
   const [connected, setConnected] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
+  // No long-lived sockets on Workers — poll the KV-backed snapshot every ~2s.
+  // The snapshot is the full recent buffer, so we replace rather than append.
   useEffect(() => {
-    const es = new EventSource("/api/events/stream");
-    es.onopen = () => setConnected(true);
-    es.onerror = () => setConnected(false);
-    es.onmessage = (m) => {
+    let alive = true;
+    const tick = async () => {
       try {
-        const e = JSON.parse(m.data) as AppEvent;
-        setEvents((prev) => [...prev.slice(-499), e]);
-      } catch {}
+        const r = await fetch("/api/events", { cache: "no-store" });
+        const { events: snap } = (await r.json()) as { events: AppEvent[] };
+        if (alive) { setEvents(snap.slice(-500)); setConnected(true); }
+      } catch {
+        if (alive) setConnected(false);
+      }
     };
-    return () => es.close();
+    tick();
+    const id = setInterval(tick, 2000);
+    return () => { alive = false; clearInterval(id); };
   }, []);
 
   useEffect(() => {

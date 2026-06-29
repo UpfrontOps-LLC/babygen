@@ -28,13 +28,24 @@ export default defineConfig({
     baseURL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
+    // Optional override for environments that ship a prebuilt Chromium at a fixed
+    // path (e.g. PLAYWRIGHT_BROWSERS_PATH sandboxes). No-op in normal CI.
+    ...(process.env.PW_EXECUTABLE_PATH ? { launchOptions: { executablePath: process.env.PW_EXECUTABLE_PATH } } : {}),
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "mobile", use: { ...devices["Pixel 5"] } },
+  ],
   webServer: {
-    command: `npm run build && npm run start -- -p ${PORT}`,
+    // The app now runs on Cloudflare Workers and needs the OpenNext binding
+    // context (KV, the Workflow), so it can't be exercised under a plain
+    // `next start`. Build the Worker and serve it locally via wrangler dev — the
+    // same runtime as production. (Skipped locally if a server is already up,
+    // e.g. an existing `wrangler dev` on E2E_BASE_URL.)
+    command: `opennextjs-cloudflare build && npx wrangler dev --port ${PORT} --local --ip 127.0.0.1`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
-    timeout: 180_000,
+    timeout: 240_000,
     stdout: "ignore",
     stderr: "pipe",
   },

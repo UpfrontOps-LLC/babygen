@@ -1,0 +1,23 @@
+// Typecheck context for the Worker entry + the GenerateBaby Workflow, which use
+// the real @cloudflare/workers-types (WorkflowEntrypoint, the `cloudflare:workers`
+// module, KVNamespace, etc.). Kept separate from the Next app's tsconfig so those
+// ambient globals never clobber lib.dom in the app code.
+//
+// Not run by the build (wrangler bundles via esbuild without typechecking); run
+// manually for type safety:  npx tsc -p tsconfig.worker.json --noEmit
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["@cloudflare/workers-types", "node"],
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["worker.ts", "src/workflows/**/*.ts", "src/lib/**/*.ts", "cloudflare-env.d.ts"]
+}

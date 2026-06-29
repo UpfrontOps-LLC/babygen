@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getEntry } from "@/lib/store";
-import { generateAddons } from "@/lib/generate";
+import { ensureAddonsInstance, awaitAddons } from "@/lib/generate";
 import { emit } from "@/lib/events";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
 
 const SKEY = process.env.STRIPE_SECRET_KEY;
 
@@ -30,9 +29,9 @@ export async function POST(req: NextRequest) {
     }
     const valid = addons.filter((a: string) => a in ADDON_PRICES);
     if (valid.length === 0) return NextResponse.json({ error: "no valid add-ons" }, { status: 400 });
-    if (!getEntry(token)) return NextResponse.json({ error: "session expired, contact support" }, { status: 404 });
+    if (!(await getEntry(token))) return NextResponse.json({ error: "session expired, contact support" }, { status: 404 });
 
-    const stripe = new Stripe(SKEY);
+    const stripe = new Stripe(SKEY, { httpClient: Stripe.createFetchHttpClient() });
 
     // GATE: the original purchase must have succeeded and own this token.
     const orig = await stripe.paymentIntents.retrieve(String(payment_intent));
@@ -63,17 +62,19 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       // Card needs authentication (rare for off_session) or was declined.
       const msg = e instanceof Stripe.errors.StripeError ? e.message : "card declined";
-      emit("upsell_failed", { token, meta: { addons: valid, error: msg } });
+      await emit("upsell_failed", { token, meta: { addons: valid, error: msg } });
       return NextResponse.json({ error: msg, needsCard: true }, { status: 402 });
     }
 
     if (pi2.status !== "succeeded") {
       return NextResponse.json({ error: "payment didn't complete", status: pi2.status }, { status: 402 });
     }
-    emit("upsell_paid", { token, meta: { addons: valid, amount } });
+    await emit("upsell_paid", { token, meta: { addons: valid, amount } });
 
-    // Deliver the add-ons (cached = real-length wait; real only if REAL_GEN=1).
-    const media = await generateAddons(token, valid);
+    // Deliver the add-ons via a durable Workflow instance (cached = real-length
+    // wait; real only if REAL_GEN=1), then await its KV result.
+    await ensureAddonsInstance(token, valid);
+    const media = await awaitAddons(token);
     return NextResponse.json({ ok: true, addons: valid, amount, media });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "unknown error" }, { status: 500 });

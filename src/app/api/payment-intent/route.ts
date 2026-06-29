@@ -45,9 +45,9 @@ export async function POST(req: NextRequest) {
   const name = addVideo ? `${plan.name} + giggle video` : plan.name;
 
   const token = crypto.randomUUID();
-  putParents(token, [await toDataUri(a), await toDataUri(b)], { tier, bump });
+  await putParents(token, [await toDataUri(a), await toDataUri(b)], { tier, bump });
 
-  const stripe = new Stripe(key);
+  const stripe = new Stripe(key, { httpClient: Stripe.createFetchHttpClient() });
   // A customer + setup_future_usage saves the card so the post-purchase one-click
   // upsell can charge it again without re-entering details (/api/upsell).
   const customer = await stripe.customers.create({ metadata: { token } });
@@ -61,14 +61,14 @@ export async function POST(req: NextRequest) {
     automatic_payment_methods: { enabled: true }, // card + Apple Pay / Google Pay / Link
   });
 
-  emit("payment_intent_created", { token, meta: { tier, bump, amount: price } });
+  await emit("payment_intent_created", { token, meta: { tier, bump, amount: price } });
 
   return NextResponse.json({
     clientSecret: intent.client_secret,
     token,
     amount: price,
     // real-length pacing for the wait screen (rule #2: no guessed timing)
-    waitSeconds: recordedSeconds(tier, bump),
+    waitSeconds: await recordedSeconds(tier, bump),
     tierKey: tierKey(tier, bump),
   });
 }

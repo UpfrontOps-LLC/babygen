@@ -1,0 +1,33 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	// Custom entry (worker.ts) re-exports OpenNext's generated handler PLUS the
+	// GenerateBaby Workflow class, so the Workflow ships in the same Worker script.
+	// `.open-next/worker.js` is produced by `opennextjs-cloudflare build` first.
+	"main": "worker.ts",
+	"name": "seeourbaby",
+	"compatibility_date": "2025-05-05",
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	// Session + meta state (replaces the old globalThis store and .data/* files).
+	// Local `wrangler dev` simulates these; before `wrangler deploy` the owner
+	// creates real namespaces and pastes the ids here (see DEPLOY_CLOUDFLARE.md).
+	"kv_namespaces": [
+		{ "binding": "SESSIONS", "id": "REPLACE_WITH_REAL_ID_SESSIONS" },
+		{ "binding": "META", "id": "REPLACE_WITH_REAL_ID_META" }
+	],
+	// Durable generation pipeline. Class lives in src/workflows/generate-baby.ts
+	// and is exported from worker.ts.
+	"workflows": [
+		{
+			"name": "generate-baby",
+			"binding": "GENERATE_BABY",
+			"class_name": "GenerateBaby"
+		}
+	],
+	"observability": {
+		"enabled": true
+	}
+}

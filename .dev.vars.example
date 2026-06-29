@@ -1,0 +1,16 @@
+# Local secrets/vars for `wrangler dev` / `npm run preview`. Copy to `.dev.vars`
+# (gitignored) and fill in. OpenNext maps these into process.env on the request
+# path; the GenerateBaby Workflow reads them off `this.env`.
+#
+# Default (cached) mode needs NO real keys to exercise the funnel UI + the cached
+# generation path. Set real keys only to test the live Stripe/Replicate paths.
+
+# REPLICATE_API_TOKEN=r8_...
+# STRIPE_SECRET_KEY=sk_test_...
+# STRIPE_WEBHOOK_SECRET=whsec_...
+# NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+# NEXT_PUBLIC_BASE_URL=http://localhost:8788
+# PRICE_CENTS=1799
+
+# Owner-authorized REAL generation (spends Replicate). Leave unset for cached mode.
+# REAL_GEN=1

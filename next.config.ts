@@ -11,3 +11,11 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
+// OpenNext (Cloudflare) dev integration: makes the Cloudflare bindings (KV
+// SESSIONS/META, the GENERATE_BABY Workflow) available to `getCloudflareContext()`
+// while running `next dev` — which is what the Playwright e2e runs against.
+// Without this, every binding access throws in dev and the suite breaks.
+// It's a no-op in production builds.
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+initOpenNextCloudflareForDev();
