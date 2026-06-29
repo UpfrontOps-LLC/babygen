@@ -15,8 +15,8 @@
 	// Local `wrangler dev` simulates these; before `wrangler deploy` the owner
 	// creates real namespaces and pastes the ids here (see DEPLOY_CLOUDFLARE.md).
 	"kv_namespaces": [
-		{ "binding": "SESSIONS", "id": "REPLACE_WITH_REAL_ID_SESSIONS" },
-		{ "binding": "META", "id": "REPLACE_WITH_REAL_ID_META" }
+		{ "binding": "SESSIONS", "id": "3e1924a502fb4d8692ad37a5447a462c" },
+		{ "binding": "META", "id": "21bc99203538401381a052a9c2ee5494" }
 	],
 	// Durable generation pipeline. Class lives in src/workflows/generate-baby.ts
 	// and is exported from worker.ts.
