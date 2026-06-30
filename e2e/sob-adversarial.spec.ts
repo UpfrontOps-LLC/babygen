@@ -85,7 +85,9 @@ test("Gen Alpha — spam, double-clicks and rapid toggles never break the funnel
       await page.locator(`[data-addon="${a}"]`).click({ force: true });
     }
   }
-  // odd number of cycles → all currently ON; confirm
+  // 6 full cycles leaves every add-on OFF again — turn one back on, then confirm
+  await page.locator('[data-addon="video"]').click({ force: true });
+  await expect(page.locator('.addon-card[data-active="true"]')).not.toHaveCount(0);
   await page.getByRole("button", { name: /Add to my baby/i }).click({ force: true });
   await expect(page.getByRole("heading", { name: /Meet your baby/i })).toBeVisible();
 
