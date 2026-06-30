@@ -1,0 +1,39 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	// STAGING Worker — a completely separate script from the live `seeourbaby`
+	// Worker. Same code, but its own name, KV namespaces, Workflow, and the
+	// staging.seeourbaby.com custom domain. Deploying this NEVER touches live.
+	//   build + deploy:  opennextjs-cloudflare build && wrangler deploy -c wrangler.staging.jsonc
+	"main": "worker.ts",
+	"name": "seeourbaby-staging",
+	"compatibility_date": "2025-05-05",
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	// Dedicated staging KV namespaces (created via the Cloudflare API for this env).
+	"kv_namespaces": [
+		{ "binding": "SESSIONS", "id": "50acd4d41ac64b6a9da48f0ed6642286" },
+		{ "binding": "META", "id": "65469068aa7f4dc095cfc58bbff13e9a" }
+	],
+	// Separate Workflow resource so staging generation never shares state with live.
+	"workflows": [
+		{
+			"name": "generate-baby-staging",
+			"binding": "GENERATE_BABY",
+			"class_name": "GenerateBaby"
+		}
+	],
+	// Bind the staging subdomain (already provisioned). custom_domain keeps DNS + cert
+	// managed by Workers and scoped to staging.seeourbaby.com only.
+	"routes": [
+		{ "pattern": "staging.seeourbaby.com", "custom_domain": true }
+	],
+	"vars": {
+		"NEXT_PUBLIC_BASE_URL": "https://staging.seeourbaby.com"
+	},
+	"observability": {
+		"enabled": true
+	}
+}
