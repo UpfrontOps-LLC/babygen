@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getEntry } from "@/lib/store";
-import { ensureAddonsInstance, awaitAddons } from "@/lib/generate";
+import { getEntry, setVideo, setAges } from "@/lib/store";
+import { ensureAddonsInstance, awaitAddons, CACHE } from "@/lib/generate";
 import { emit } from "@/lib/events";
 
 export const runtime = "nodejs";
@@ -70,6 +70,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "payment didn't complete", status: pi2.status }, { status: 402 });
     }
     await emit("upsell_paid", { token, meta: { addons: valid, amount } });
+
+    // FAST preview path (staging): skip the durable Workflow's ~50s cold start and
+    // return the cached add-on media immediately. Production still uses the Workflow.
+    if (process.env.FAST_GEN === "1" && process.env.REAL_GEN !== "1") {
+      const media: { video?: string; ages?: string[]; extras?: string[] } = {};
+      const extras: string[] = [];
+      if (valid.includes("video")) { media.video = CACHE.video; await setVideo(token, CACHE.video); }
+      if (valid.includes("ages")) { media.ages = CACHE.ages; await setAges(token, CACHE.ages); }
+      if (valid.includes("gender")) extras.push(CACHE.images[0], CACHE.images[1]);
+      if (valid.includes("twins")) extras.push(CACHE.images[2]);
+      if (valid.includes("hd")) extras.push(...CACHE.images);
+      if (extras.length) media.extras = extras;
+      await emit("upsell_generate_done", { token, meta: { addons: valid, cached: true, fast: true } });
+      return NextResponse.json({ ok: true, addons: valid, amount, media });
+    }
 
     // Deliver the add-ons via a durable Workflow instance (cached = real-length
     // wait; real only if REAL_GEN=1), then await its KV result.

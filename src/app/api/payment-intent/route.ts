@@ -52,8 +52,13 @@ export async function POST(req: NextRequest) {
   const extras = [addVideo && "giggle video", twins && "twins", grow && "ages 5/10/18"].filter(Boolean).join(", ");
   const name = extras ? `${plan.name} + ${extras}` : plan.name;
 
+  const gender = String(form.get("gender") || "surprise");
+  // Deliverable intent — what the funnel actually sold, so the workflow honors
+  // à-la-carte add-ons (grow → ages) rather than tier-only defaults.
+  const wantVideo = tier !== "basic" || addVideo;
+  const wantAges = grow || tier === "ultimate";
   const token = crypto.randomUUID();
-  await putParents(token, [await toDataUri(a), await toDataUri(b)], { tier, bump });
+  await putParents(token, [await toDataUri(a), await toDataUri(b)], { tier, bump, wantVideo, wantAges, twins, gender });
 
   const stripe = new Stripe(key, { httpClient: Stripe.createFetchHttpClient() });
   // A customer + setup_future_usage saves the card so the post-purchase one-click
@@ -65,7 +70,7 @@ export async function POST(req: NextRequest) {
     description: name,
     customer: customer.id,
     setup_future_usage: "on_session",
-    metadata: { token, tier, bump },
+    metadata: { token, tier, bump, twins: twins ? "1" : "", grow: grow ? "1" : "", gender },
     automatic_payment_methods: { enabled: true }, // card + Apple Pay / Google Pay / Link
   });
 

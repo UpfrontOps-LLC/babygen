@@ -17,9 +17,18 @@ export type Entry = {
   paid?: boolean;
   tier?: string;
   bump?: string;
+  // Explicit deliverable intent from the desktop funnel (video on Deluxe/Ultimate,
+  // ages from the "Watch them grow" add-on or Ultimate). When set, the workflow
+  // trusts these over the tier-only defaults so add-ons priced à la carte are honored.
+  wantVideo?: boolean;
+  wantAges?: boolean;
+  twins?: boolean;
+  gender?: string;
   generating?: boolean;
   error?: string;
 };
+
+export type ParentMeta = { tier?: string; bump?: string; wantVideo?: boolean; wantAges?: boolean; twins?: boolean; gender?: string };
 
 // 24h: long enough for a reveal + same-day upsell, short enough to honor the
 // "photos aren't kept" promise (parents are also cleared explicitly post-gen).
@@ -44,10 +53,19 @@ async function write(token: string, entry: Entry, env?: CloudflareEnv): Promise<
 export async function putParents(
   token: string,
   parents: string[],
-  meta?: { tier?: string; bump?: string },
+  meta?: ParentMeta,
   env?: CloudflareEnv
 ): Promise<void> {
-  await write(token, { parents, createdAt: Date.now(), tier: meta?.tier, bump: meta?.bump }, env);
+  await write(token, {
+    parents,
+    createdAt: Date.now(),
+    tier: meta?.tier,
+    bump: meta?.bump,
+    wantVideo: meta?.wantVideo,
+    wantAges: meta?.wantAges,
+    twins: meta?.twins,
+    gender: meta?.gender,
+  }, env);
 }
 
 export async function getEntry(token: string, env?: CloudflareEnv): Promise<Entry | null> {

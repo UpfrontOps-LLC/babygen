@@ -115,11 +115,20 @@ export default function Home() {
   const [pay, setPay] = useState<PaymentSession | null>(null);
   const [payError, setPayError] = useState("");
   const [creatingPI, setCreatingPI] = useState(false);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  // Real generated deliverables from /api/generate (data: URIs in real mode, /cache/* cached).
+  const [genImages, setGenImages] = useState<string[] | null>(null);
+  const [genVideo, setGenVideo] = useState<string | null>(null);
+  const [genAges, setGenAges] = useState<string[] | null>(null);
+  const [genExtras, setGenExtras] = useState<string[]>([]);
+  const [genError, setGenError] = useState("");
+  const [addonBusy, setAddonBusy] = useState(false);
 
   const waitTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const factTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const waitEnd = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastT = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const genCancel = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     track("view", { surface: "desktop" });
@@ -180,6 +189,7 @@ export default function Home() {
       fd.append("tier", tier);
       fd.append("twins", twins ? "1" : "");
       fd.append("grow", stage === "grow" ? "1" : "");
+      fd.append("gender", gender);
       const res = await fetch("/api/payment-intent", { method: "POST", body: fd });
       const data = await res.json();
       if (data.clientSecret) setPay({ clientSecret: data.clientSecret, token: data.token, amount: data.amount, waitSeconds: data.waitSeconds });
@@ -193,20 +203,53 @@ export default function Home() {
   // Always rebuild the intent on entry so price reflects the latest selection
   // (the "change my mind, go back and forth" path).
   function goToCheckout() { setPay(null); setPayError(""); go("checkout"); createPaymentIntent(); }
-  function onPaid() { go("wait"); startWait(); }
-  function startWait() {
+  function onPaid(piId: string) { setPaymentIntentId(piId); go("wait"); startGeneration(piId); }
+  // Kick off the REAL durable generation (GenerateBaby Workflow) and reveal its
+  // output. The trivia game + progress bar fill the wait. /api/generate long-polls
+  // the durable workflow; the connection can drop, but the workflow keeps running,
+  // so we retry — a later call returns the now-ready result instantly (idempotent).
+  function startGeneration(piId: string) {
     setWaitProgress(0); setWaitQuestion(0); setWaitPhase("game"); setGuessAnswers([]); setFactIndex(0);
+    setGenError(""); setGenImages(null); setGenVideo(null); setGenAges(null); setGenExtras([]);
     [waitTimer, factTimer].forEach((t) => t.current && clearInterval(t.current));
     if (waitEnd.current) clearTimeout(waitEnd.current);
+    const total = Math.max(8, pay?.waitSeconds || 100);
+    const stepPct = 95 / (total / 0.6); // fill toward 95% across the real expected duration
     let p = 0;
-    waitTimer.current = setInterval(() => {
-      if (p < 95) { p += 5 + Math.random() * 4; if (p > 95) p = 95; setWaitProgress(p); }
-    }, 600);
-    waitEnd.current = setTimeout(() => {
+    waitTimer.current = setInterval(() => { if (p < 95) { p = Math.min(95, p + stepPct); setWaitProgress(p); } }, 600);
+    const token = pay?.token;
+    if (!token) { setGenError("We lost your session. Refresh to retry — you won't be charged again."); return; }
+
+    let cancelled = false;
+    const finish = (d: { images?: string[]; video?: string; ages?: string[] }) => {
+      if (cancelled) return;
+      cancelled = true;
       if (waitTimer.current) clearInterval(waitTimer.current);
+      setGenImages(d.images!);
+      if (d.video) setGenVideo(d.video);
+      if (d.ages?.length) setGenAges(d.ages);
       setWaitProgress(100);
-      setTimeout(() => go("reveal"), 700);
-    }, 14000);
+      setTimeout(() => go("reveal"), 600);
+    };
+    (async () => {
+      // Each attempt is time-boxed: the long-poll connection can hang (edge cancels
+      // it without closing the client side), so we abort + retry. The workflow is
+      // durable + idempotent, so once it lands the result a fresh call returns fast.
+      for (let attempt = 0; attempt < 60 && !cancelled; attempt++) {
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort(), 7000);
+        try {
+          const r = await fetch("/api/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, payment_intent: piId }), signal: ctrl.signal });
+          const d = await r.json();
+          if (d.images?.length) { finish(d); return; }
+          if (r.status === 402 || r.status === 404) { setGenError(d.error || "We couldn't verify your order."); return; }
+        } catch { /* aborted / dropped — the workflow keeps going; retry */ }
+        finally { clearTimeout(to); }
+        await new Promise((res) => setTimeout(res, 1200));
+      }
+      if (!cancelled) setGenError("This is taking longer than usual. Refresh to retry — you won't be charged again.");
+    })();
+    genCancel.current = () => { cancelled = true; };
   }
   function answerGame(answer: "a" | "b") {
     setGuessAnswers((g) => [...g, answer]);
@@ -222,9 +265,37 @@ export default function Home() {
   }
   function toggleAddOn(key: keyof AddOns) { setAddOns((s) => ({ ...s, [key]: !s[key] })); }
   function addOnsTotal() { return (Object.keys(addOns) as (keyof AddOns)[]).reduce((t, k) => t + (addOns[k] ? ADDON_PRICES[k] : 0), 0); }
-  function confirmAddOns() { showToast("Added! Charging your card…"); setTimeout(() => go("reveal"), 900); }
+  // One-click upsell: charge the saved card via /api/upsell and merge the new
+  // deliverables (video / ages / extras) straight into the reveal.
+  async function confirmAddOns() {
+    const token = pay?.token;
+    const selected = (Object.keys(addOns) as (keyof AddOns)[]).filter((k) => addOns[k]);
+    if (!token || !paymentIntentId || selected.length === 0) { go("reveal"); return; }
+    const map: Record<keyof AddOns, string> = { video: "video", ages: "ages", other: "gender", twin: "twins", hd: "hd" };
+    const ids = selected.map((k) => map[k]);
+    setAddonBusy(true); showToast("Adding to your order…");
+    try {
+      const r = await fetch("/api/upsell", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, payment_intent: paymentIntentId, addons: ids }) });
+      const d = await r.json();
+      if (d.ok) {
+        if (d.media?.video) setGenVideo(d.media.video);
+        if (d.media?.ages?.length) setGenAges(d.media.ages);
+        if (d.media?.extras?.length) setGenExtras((e) => [...e, ...d.media.extras]);
+        setAddOns({ video: false, ages: false, other: false, twin: false, hd: false });
+        showToast("Added to your baby 🎉");
+        go("reveal");
+      } else {
+        showToast(d.error || "That didn't go through. Try again.");
+      }
+    } catch {
+      showToast("That didn't go through. Try again.");
+    } finally {
+      setAddonBusy(false);
+    }
+  }
   function showToast(msg: string) { setToast(msg); if (toastT.current) clearTimeout(toastT.current); toastT.current = setTimeout(() => setToast(""), 2200); }
   function restart() {
+    genCancel.current?.();
     [waitTimer, factTimer].forEach((t) => t.current && clearInterval(t.current));
     [waitEnd, toastT].forEach((t) => t.current && clearTimeout(t.current));
     setStep("landing"); setP1(null); setP2(null); setGender("surprise"); setStage("baby"); setTwins(false);
@@ -232,6 +303,7 @@ export default function Home() {
     setWaitProgress(0); setWaitQuestion(0); setGuessAnswers([]); setWaitPhase("game"); setFactIndex(0);
     setAddOns({ video: false, ages: false, other: false, twin: false, hd: false }); setToast("");
     setPay(null); setPayError(""); setCreatingPI(false);
+    setPaymentIntentId(null); setGenImages(null); setGenVideo(null); setGenAges(null); setGenExtras([]); setGenError(""); setAddonBusy(false);
   }
 
   // Derived
@@ -280,6 +352,9 @@ export default function Home() {
     { key: "hd" as const, emoji: "🖼️", title: "HD + printable", sub: "Frame-quality print for the nursery", price: "+$5", owned: ownsHd },
   ];
   const offers = ADDON_CATALOG.filter((a) => !a.owned);
+  // The actual generated photos (from /api/generate); fall back to samples only
+  // if generation state is somehow missing (the reveal is reached after it lands).
+  const revealImgs = genImages?.length ? genImages : [BABY(4), BABY(5), BABY(2)];
 
   return (
     <div className="sob">
@@ -652,7 +727,16 @@ export default function Home() {
             )}
 
             {/* WAIT */}
-            {step === "wait" && (
+            {step === "wait" && genError && (
+              <div style={{ textAlign: "center", padding: "20px 8px" }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>😟</div>
+                <h2 className="display-h2" style={{ margin: "0 0 8px", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 28, lineHeight: "32px" }}>Hmm, that didn&apos;t work</h2>
+                <p style={{ margin: "0 0 18px", fontSize: 14, color: "var(--text-body)", fontWeight: 500 }}>{genError}</p>
+                <button onClick={() => paymentIntentId && startGeneration(paymentIntentId)} className="btn-primary">Try again</button>
+                <p style={{ marginTop: 12, fontSize: 12, color: "rgba(0,0,0,0.5)" }}>You won&apos;t be charged again.</p>
+              </div>
+            )}
+            {step === "wait" && !genError && (
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 72, lineHeight: 1, animation: "sob-bounce-y 1.4s ease-in-out infinite", marginBottom: 16 }}>👶</div>
                 <h2 className="display-h2" style={{ margin: "0 0 8px", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 32, lineHeight: "36px", letterSpacing: "-0.02em" }}>Your baby is on the way 🎉</h2>
@@ -689,35 +773,47 @@ export default function Home() {
                 </div>
                 <div className="reveal-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 22 }}>
                   <div className="reveal-img" style={{ gridRow: "span 2", gridColumn: "span 2" }}>
-                    <img src={BABY(4)} alt="" />
+                    <img src={revealImgs[0]} alt="your baby" />
                     <button onClick={() => showToast("Photo saved")} type="button" className="save-overlay">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>Save
                     </button>
                   </div>
-                  <div className="reveal-img" style={{ animationDelay: "0.2s" }}><img src={BABY(5)} alt="" /><button onClick={() => showToast("Photo saved")} type="button" className="save-overlay">⬇️</button></div>
-                  <div className="reveal-img" style={{ animationDelay: "0.4s" }}><img src={BABY(2)} alt="" /><button onClick={() => showToast("Photo saved")} type="button" className="save-overlay">⬇️</button></div>
+                  <div className="reveal-img" style={{ animationDelay: "0.2s" }}><img src={revealImgs[1] ?? revealImgs[0]} alt="your baby" /><button onClick={() => showToast("Photo saved")} type="button" className="save-overlay">⬇️</button></div>
+                  <div className="reveal-img" style={{ animationDelay: "0.4s" }}><img src={revealImgs[2] ?? revealImgs[0]} alt="your baby" /><button onClick={() => showToast("Photo saved")} type="button" className="save-overlay">⬇️</button></div>
                 </div>
                 <p style={{ margin: "0 0 18px", textAlign: "center", fontSize: 14, color: "var(--text-body)", fontWeight: 500 }}>{twins ? "Your two little ones, as imagined by the AI 💕" : "Three takes from the AI · save your favorite 💕"}</p>
 
-                {/* Music video — delivered because they bought Deluxe/Ultimate */}
-                {ownsVideo && (
+                {/* Music video — the real generated clip (Deluxe/Ultimate or add-on) */}
+                {genVideo && (
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 18 }}>🎥</span>Your music video</div>
                     {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                    <video src="/cache/giggle.mp4" autoPlay muted loop playsInline controls style={{ width: "100%", borderRadius: 20, display: "block", background: "#000", aspectRatio: "1/1", objectFit: "cover", outline: "4px solid var(--vetic-pink)", outlineOffset: -2 }} />
+                    <video src={genVideo} autoPlay muted loop playsInline controls style={{ width: "100%", borderRadius: 20, display: "block", background: "#000", aspectRatio: "1/1", objectFit: "cover", outline: "4px solid var(--vetic-pink)", outlineOffset: -2 }} />
                   </div>
                 )}
 
-                {/* Age progression — delivered because they bought "Watch them grow" / Ultimate */}
-                {ownsAges && (
+                {/* Age progression — the real generated set (grow / Ultimate or add-on) */}
+                {genAges && genAges.length > 0 && (
                   <div style={{ marginBottom: 22 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 18 }}>📈</span>Watch them grow</div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-                      {([["Age 5", "/cache/age1.webp"], ["Age 10", "/cache/age2.webp"], ["Age 18", "/cache/age3.webp"]] as const).map(([label, src]) => (
-                        <div key={label} style={{ textAlign: "center" }}>
-                          <img src={src} alt={label} style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: 16, outline: "3px solid var(--vetic-pink)", outlineOffset: -2 }} />
-                          <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: "var(--text-body)" }}>{label}</div>
+                      {genAges.slice(0, 3).map((src, i) => (
+                        <div key={i} style={{ textAlign: "center" }}>
+                          <img src={src} alt={["Age 5", "Age 10", "Age 18"][i]} style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: 16, outline: "3px solid var(--vetic-pink)", outlineOffset: -2 }} />
+                          <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: "var(--text-body)" }}>{["Age 5", "Age 10", "Age 18"][i]}</div>
                         </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add-on extras bought from the upsell (gender / twin / HD) */}
+                {genExtras.length > 0 && (
+                  <div style={{ marginBottom: 22 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 18 }}>✨</span>Your add-ons</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                      {genExtras.map((src, i) => (
+                        <img key={i} src={src} alt="add-on" style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: 16, outline: "3px solid var(--vetic-pink)", outlineOffset: -2 }} />
                       ))}
                     </div>
                   </div>
@@ -726,7 +822,7 @@ export default function Home() {
                 <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginBottom: 20 }}>
                   <button onClick={() => showToast("Saved all photos")} className="btn-primary"><span style={{ fontSize: 18 }}>📥</span>Save all photos</button>
                   <button onClick={() => showToast("Opening share sheet…")} className="btn-secondary"><span style={{ fontSize: 16 }}>📲</span>Share</button>
-                  {ownsVideo && <button onClick={() => showToast("Video saved")} className="btn-secondary"><span style={{ fontSize: 16 }}>🎥</span>Save video</button>}
+                  {genVideo && <button onClick={() => showToast("Video saved")} className="btn-secondary"><span style={{ fontSize: 16 }}>🎥</span>Save video</button>}
                 </div>
                 {guessAnswers.length > 0 && <div style={{ textAlign: "center", margin: "0 0 12px", fontSize: 12, color: "rgba(0,0,0,0.45)", fontWeight: 500 }}>🎲 {quizCorrect} / {guessAnswers.length} trivia correct</div>}
                 {offers.length > 0 && <button onClick={() => go("upsell")} style={{ background: "rgba(242,164,230,0.20)", color: "var(--vetic-ink)", border: "none", padding: "14px 20px", borderRadius: 14, fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 14, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>✨ Make it even better · one tap, no card needed →</button>}
@@ -753,7 +849,7 @@ export default function Home() {
                   <div style={{ fontSize: 12, color: "rgba(0,0,0,0.55)", fontWeight: 500 }}>🔒 No need to re-enter your card</div>
                   {hasAddOns ? (
                     <div>
-                      <button onClick={confirmAddOns} className="btn-primary">Add to my baby for ${addOnsTotal()}<ArrowRight /></button>
+                      <button onClick={confirmAddOns} className="btn-primary" disabled={addonBusy}>{addonBusy ? "Adding…" : <>Add to my baby for ${addOnsTotal()}<ArrowRight /></>}</button>
                     </div>
                   ) : (
                     <button onClick={() => go("reveal")} className="btn-secondary">I&apos;m good · back to my baby</button>

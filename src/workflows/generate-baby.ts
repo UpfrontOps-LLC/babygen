@@ -21,6 +21,7 @@ import {
   wantsAges,
   tierKey,
   addonWaitSeconds,
+  SEED,
 } from "@/lib/gen-timing";
 import {
   CACHE,
@@ -68,15 +69,20 @@ export class GenerateBaby extends WorkflowEntrypoint<CloudflareEnv, GenerateBaby
     }
     const tier = entry.tier || "basic";
     const bump = entry.bump || "";
-    const wantsV = wantsVideo(tier, bump);
-    const wantsA = wantsAges(tier);
+    // Trust the funnel's explicit deliverable intent when present (à-la-carte
+    // add-ons like "Watch them grow" on Deluxe), else fall back to tier defaults.
+    const wantsV = entry.wantVideo ?? wantsVideo(tier, bump);
+    const wantsA = entry.wantAges ?? wantsAges(tier);
 
     await emit("generate_start", { token, meta: { tier, bump, real } }, env);
 
     // ---- CACHED GATE (default): real-length wait, zero Replicate spend ----
     if (!real) {
-      const secs = await recordedSeconds(tier, bump, env);
-      await step.sleep("cached-wait", Math.round(secs * 1000));
+      let secs = await recordedSeconds(tier, bump, env);
+      if (wantsA && !wantsAges(tier)) secs += SEED.imageWall; // grow added an age stage beyond the tier
+      // FAST_GEN: staging/preview serves the cached outputs immediately (skips the
+      // honest real-length sleep) so previews and E2E don't wait ~2 min.
+      if (env.FAST_GEN !== "1") await step.sleep("cached-wait", Math.round(secs * 1000));
       await setImages(token, CACHE.images, env);
       if (wantsV) await setVideo(token, CACHE.video, env);
       if (wantsA) await setAges(token, CACHE.ages, env);
@@ -89,8 +95,14 @@ export class GenerateBaby extends WorkflowEntrypoint<CloudflareEnv, GenerateBaby
     const t0 = await step.do("t0", async () => Date.now());
     const refs = entry.parents;
 
+    // Honor the funnel's gender / twins choice for the main images.
+    let prompts = VARIANTS;
+    if (entry.twins) prompts = [TWIN_PROMPT, TWIN_PROMPT, TWIN_PROMPT];
+    else if (entry.gender === "boy") prompts = [GENDER_PROMPTS[0], GENDER_PROMPTS[0], VARIANTS[2]];
+    else if (entry.gender === "girl") prompts = [GENDER_PROMPTS[1], GENDER_PROMPTS[1], VARIANTS[2]];
+
     const settled = await Promise.allSettled(
-      VARIANTS.map((v, i) =>
+      prompts.map((v, i) =>
         step.do(`image-${i}`, STEP_RETRY, async () => toDataUri(await generateImage(blendPrompt(v), refs, apiToken)))
       )
     );

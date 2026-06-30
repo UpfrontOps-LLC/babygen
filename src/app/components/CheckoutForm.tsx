@@ -22,7 +22,7 @@ function fmt(cents: number) {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" }).replace(/\.00$/, "");
 }
 
-function Inner({ session, onPaid }: { session: PaymentSession; onPaid: () => void }) {
+function Inner({ session, onPaid }: { session: PaymentSession; onPaid: (paymentIntentId: string) => void }) {
   const stripe = useStripe();
   const elements = useElements();
   const [busy, setBusy] = useState(false);
@@ -43,7 +43,7 @@ function Inner({ session, onPaid }: { session: PaymentSession; onPaid: () => voi
       return;
     }
     if (paymentIntent?.status === "succeeded") {
-      onPaid();
+      onPaid(paymentIntent.id);
     } else {
       setErr("Payment didn't complete, please try again.");
       setBusy(false);
@@ -59,7 +59,7 @@ function Inner({ session, onPaid }: { session: PaymentSession; onPaid: () => voi
       confirmParams: { return_url: window.location.href },
     });
     if (error) { setErr(error.message || "Payment failed, please try again."); return; }
-    if (paymentIntent?.status === "succeeded") onPaid();
+    if (paymentIntent?.status === "succeeded") onPaid(paymentIntent.id);
   }
 
   return (
@@ -95,7 +95,7 @@ function Inner({ session, onPaid }: { session: PaymentSession; onPaid: () => voi
   );
 }
 
-export default function CheckoutForm({ session, onPaid }: { session: PaymentSession; onPaid: () => void }) {
+export default function CheckoutForm({ session, onPaid }: { session: PaymentSession; onPaid: (paymentIntentId: string) => void }) {
   return (
     <Elements
       stripe={getStripe()}

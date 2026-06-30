@@ -30,7 +30,10 @@
 	// It persists across script updates — re-add a `routes` entry here only if a
 	// token with Zone › Workers Routes edit is used.
 	"vars": {
-		"NEXT_PUBLIC_BASE_URL": "https://staging.seeourbaby.com"
+		"NEXT_PUBLIC_BASE_URL": "https://staging.seeourbaby.com",
+		// Staging previews + E2E serve the cached real outputs immediately instead of
+		// sleeping the honest ~2-min generation time. REAL_GEN stays unset (no spend).
+		"FAST_GEN": "1"
 	},
 	"observability": {
 		"enabled": true

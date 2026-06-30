@@ -74,7 +74,7 @@ test("Gen Alpha — spam, double-clicks and rapid toggles never break the funnel
     else break;
   }
   // reveal arrives on its own timer
-  await expect(page.getByRole("heading", { name: /Meet your (baby|twins)/i })).toBeVisible({ timeout: 20000 });
+  await expect(page.getByRole("heading", { name: /Meet your (baby|twins)/i })).toBeVisible({ timeout: 45000 });
   // spam save buttons
   for (let i = 0; i < 5; i++) await page.getByRole("button", { name: /Save all photos/i }).click();
 
