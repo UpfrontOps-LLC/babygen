@@ -144,8 +144,13 @@ test("landing → upload → configure → review → checkout → wait → reve
   await hostStays(page);
 
   // ---------- REVEAL ----------
-  await expect(page.getByRole("heading", { name: /Meet your baby/i })).toBeVisible({ timeout: 20000 });
+  // twins were chosen, so the headline says "twins", not "baby"
+  await expect(page.getByRole("heading", { name: /Meet your twins/i })).toBeVisible({ timeout: 20000 });
   await expect(page.locator(".reveal-img img")).toHaveCount(3);
+  // DELIVERY: they paid for a music video (Deluxe) + age progression (grow) — both must appear
+  await expect(page.locator("video")).toBeVisible();
+  await expect(page.getByText("Watch them grow")).toBeVisible();
+  await expect(page.getByText("Age 18")).toBeVisible();
   // save buttons fire a toast
   await page.getByRole("button", { name: /Save all photos/i }).click();
   await expect(page.locator(".toast")).toBeVisible();
@@ -158,18 +163,21 @@ test("landing → upload → configure → review → checkout → wait → reve
   // ---------- UPSELL ----------
   await page.getByRole("button", { name: /Make it even better/i }).click();
   await expect(page.getByRole("heading", { name: /Make it even better/i })).toBeVisible();
-  // toggle add-ons; total reflects sum (video 7 + ages 9 = 16).
-  // force:true — the Pixel 5 touch profile flags an "intercept" even though
-  // elementFromPoint resolves to the card's own child (verified: no overlay).
-  await page.locator('[data-addon="video"]').click({ force: true });
-  await page.locator('[data-addon="ages"]').click({ force: true });
+  // UX: the upsell must NEVER re-sell what this order already includes —
+  // video (Deluxe), ages (grow), twin (twins) are owned, so they're hidden.
+  await expect(page.locator('[data-addon="video"]')).toHaveCount(0);
+  await expect(page.locator('[data-addon="ages"]')).toHaveCount(0);
+  await expect(page.locator('[data-addon="twin"]')).toHaveCount(0);
+  // only the un-owned ones remain: boy/girl version (+$5) and HD print (+$5)
+  await page.locator('[data-addon="other"]').click({ force: true });
+  await page.locator('[data-addon="hd"]').click({ force: true });
   await expect(page.locator('.addon-card[data-active="true"]')).toHaveCount(2);
-  await expect(page.getByRole("button", { name: /Add to my baby for \$16/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Add to my baby for \$10/i })).toBeVisible();
   // untoggle all → "I'm good" appears
-  await page.locator('[data-addon="video"]').click({ force: true });
-  await page.locator('[data-addon="ages"]').click({ force: true });
+  await page.locator('[data-addon="other"]').click({ force: true });
+  await page.locator('[data-addon="hd"]').click({ force: true });
   await page.getByRole("button", { name: /I'm good/i }).click();
-  await expect(page.getByRole("heading", { name: /Meet your baby/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Meet your (baby|twins)/i })).toBeVisible();
   await hostStays(page);
 
   // ---------- restart ----------
@@ -212,7 +220,7 @@ test("real Stripe payment — type a card, change your mind, decline then succee
   await fillCard(page, "4242424242424242");
   await page.getByRole("button", { name: /Pay \$39\s*&\s*reveal/i }).click();
   await expect(page.getByRole("heading", { name: /Your baby is on the way/i })).toBeVisible({ timeout: 25000 });
-  await expect(page.getByRole("heading", { name: /Meet your baby/i })).toBeVisible({ timeout: 25000 });
+  await expect(page.getByRole("heading", { name: /Meet your (baby|twins)/i })).toBeVisible({ timeout: 25000 });
   await hostStays(page);
 });
 

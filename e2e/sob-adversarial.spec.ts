@@ -74,22 +74,23 @@ test("Gen Alpha — spam, double-clicks and rapid toggles never break the funnel
     else break;
   }
   // reveal arrives on its own timer
-  await expect(page.getByRole("heading", { name: /Meet your baby/i })).toBeVisible({ timeout: 20000 });
+  await expect(page.getByRole("heading", { name: /Meet your (baby|twins)/i })).toBeVisible({ timeout: 20000 });
   // spam save buttons
   for (let i = 0; i < 5; i++) await page.getByRole("button", { name: /Save all photos/i }).click();
 
-  // upsell: rapid-toggle every add-on several times then confirm
+  // upsell: rapid-toggle whatever add-ons are OFFERED (owned ones are hidden), then confirm
   await page.getByRole("button", { name: /Make it even better/i }).click();
+  const addonCards = page.locator(".addon-card");
+  const count = await addonCards.count();
+  expect(count, "upsell should offer at least one un-owned add-on").toBeGreaterThan(0);
   for (let i = 0; i < 6; i++) {
-    for (const a of ["video", "ages", "other", "twin", "hd"]) {
-      await page.locator(`[data-addon="${a}"]`).click({ force: true });
-    }
+    for (let j = 0; j < count; j++) await addonCards.nth(j).click({ force: true });
   }
-  // 6 full cycles leaves every add-on OFF again — turn one back on, then confirm
-  await page.locator('[data-addon="video"]').click({ force: true });
+  // 6 full cycles leaves them all OFF again — turn one back on, then confirm
+  await addonCards.first().click({ force: true });
   await expect(page.locator('.addon-card[data-active="true"]')).not.toHaveCount(0);
   await page.getByRole("button", { name: /Add to my baby/i }).click({ force: true });
-  await expect(page.getByRole("heading", { name: /Meet your baby/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Meet your (baby|twins)/i })).toBeVisible();
 
   expect(errors, `uncaught errors during chaos:\n${errors.join("\n")}`).toEqual([]);
 });

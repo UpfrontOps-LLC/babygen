@@ -264,6 +264,23 @@ export default function Home() {
   const stepLabels: Record<string, string> = { upload: "Step 1 of 3 · Photos", configure: "Step 2 of 3 · Choose", review: "Step 3 of 3 · Review", checkout: "Checkout", wait: "Painting your baby…", reveal: "Reveal", upsell: "Bonus offer" };
   const pct = Math.round(waitProgress) + "%";
 
+  // Once they've paid, navigating backward causes "am I charged again?" panic.
+  const postPaid = step === "wait" || step === "reveal" || step === "upsell";
+  // What this order already includes — so the upsell never re-sells it.
+  const ownsVideo = tier !== "basic";
+  const ownsAges = stage === "grow" || tier === "ultimate";
+  const ownsHd = tier === "ultimate";
+  const hasTwins = twins;
+  // Upsell catalogue, filtered to only what they DON'T already have.
+  const ADDON_CATALOG = [
+    { key: "video" as const, emoji: "🎥", title: "Music video", sub: "Pick the vibe · giggle, dance, country…", price: "+$7", owned: ownsVideo },
+    { key: "ages" as const, emoji: "📈", title: "Ages 5, 10, 18", sub: "Watch them grow up", price: "+$9", owned: ownsAges },
+    { key: "other" as const, emoji: "👦👧", title: "Boy/girl version", sub: "See the other gender", price: "+$5", owned: gender === "surprise" },
+    { key: "twin" as const, emoji: "👶👶", title: "Twin / sibling", sub: "Add another baby", price: "+$5", owned: hasTwins },
+    { key: "hd" as const, emoji: "🖼️", title: "HD + printable", sub: "Frame-quality print for the nursery", price: "+$5", owned: ownsHd },
+  ];
+  const offers = ADDON_CATALOG.filter((a) => !a.owned);
+
   return (
     <div className="sob">
       {step === "landing" && (
@@ -359,9 +376,13 @@ export default function Home() {
         <div style={{ minHeight: "100vh", padding: "32px 24px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start" }}>
           {/* Mini top bar */}
           <div style={{ width: "100%", maxWidth: 680, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 4px 18px" }}>
-            <button onClick={goBack} style={{ background: "white", border: "none", padding: "8px 14px 8px 10px", borderRadius: 999, fontFamily: "var(--font-sans)", fontWeight: 600, fontSize: 13, color: "var(--vetic-ink)", display: "inline-flex", alignItems: "center", gap: 6, boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>Back
-            </button>
+            {postPaid ? (
+              <span style={{ width: 72 }} aria-hidden="true" />
+            ) : (
+              <button onClick={goBack} style={{ background: "white", border: "none", padding: "8px 14px 8px 10px", borderRadius: 999, fontFamily: "var(--font-sans)", fontWeight: 600, fontSize: 13, color: "var(--vetic-ink)", display: "inline-flex", alignItems: "center", gap: 6, boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>Back
+              </button>
+            )}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 18 }}>👶</span><span style={{ fontWeight: 800, fontSize: 14 }}>See Our Baby</span>
             </div>
@@ -663,7 +684,7 @@ export default function Home() {
             {step === "reveal" && (
               <div>
                 <div style={{ textAlign: "center", marginBottom: 28 }}>
-                  <h2 className="display-h2" style={{ margin: "0 0 6px", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 44, lineHeight: "50px", letterSpacing: "-0.025em" }}>Meet your <Squiggle>baby</Squiggle> 🎉</h2>
+                  <h2 className="display-h2" style={{ margin: "0 0 6px", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 44, lineHeight: "50px", letterSpacing: "-0.025em" }}>Meet your <Squiggle>{twins ? "twins" : "baby"}</Squiggle> 🎉</h2>
                   <p style={{ margin: 0, fontWeight: 500, fontSize: 15, color: "var(--text-body)" }}>{revealLine}</p>
                 </div>
                 <div className="reveal-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 22 }}>
@@ -676,14 +697,39 @@ export default function Home() {
                   <div className="reveal-img" style={{ animationDelay: "0.2s" }}><img src={BABY(5)} alt="" /><button onClick={() => showToast("Photo saved")} type="button" className="save-overlay">⬇️</button></div>
                   <div className="reveal-img" style={{ animationDelay: "0.4s" }}><img src={BABY(2)} alt="" /><button onClick={() => showToast("Photo saved")} type="button" className="save-overlay">⬇️</button></div>
                 </div>
-                <p style={{ margin: "0 0 18px", textAlign: "center", fontSize: 14, color: "var(--text-body)", fontWeight: 500 }}>Yours to keep · save them or share with family 💕</p>
+                <p style={{ margin: "0 0 18px", textAlign: "center", fontSize: 14, color: "var(--text-body)", fontWeight: 500 }}>{twins ? "Your two little ones, as imagined by the AI 💕" : "Three takes from the AI · save your favorite 💕"}</p>
+
+                {/* Music video — delivered because they bought Deluxe/Ultimate */}
+                {ownsVideo && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 18 }}>🎥</span>Your music video</div>
+                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    <video src="/cache/giggle.mp4" autoPlay muted loop playsInline controls style={{ width: "100%", borderRadius: 20, display: "block", background: "#000", aspectRatio: "1/1", objectFit: "cover", outline: "4px solid var(--vetic-pink)", outlineOffset: -2 }} />
+                  </div>
+                )}
+
+                {/* Age progression — delivered because they bought "Watch them grow" / Ultimate */}
+                {ownsAges && (
+                  <div style={{ marginBottom: 22 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}><span style={{ fontSize: 18 }}>📈</span>Watch them grow</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                      {([["Age 5", "/cache/age1.webp"], ["Age 10", "/cache/age2.webp"], ["Age 18", "/cache/age3.webp"]] as const).map(([label, src]) => (
+                        <div key={label} style={{ textAlign: "center" }}>
+                          <img src={src} alt={label} style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: 16, outline: "3px solid var(--vetic-pink)", outlineOffset: -2 }} />
+                          <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: "var(--text-body)" }}>{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", marginBottom: 20 }}>
                   <button onClick={() => showToast("Saved all photos")} className="btn-primary"><span style={{ fontSize: 18 }}>📥</span>Save all photos</button>
                   <button onClick={() => showToast("Opening share sheet…")} className="btn-secondary"><span style={{ fontSize: 16 }}>📲</span>Share</button>
-                  {tier !== "basic" && <button onClick={() => showToast("Video saved")} className="btn-secondary"><span style={{ fontSize: 16 }}>🎥</span>Save video</button>}
+                  {ownsVideo && <button onClick={() => showToast("Video saved")} className="btn-secondary"><span style={{ fontSize: 16 }}>🎥</span>Save video</button>}
                 </div>
                 {guessAnswers.length > 0 && <div style={{ textAlign: "center", margin: "0 0 12px", fontSize: 12, color: "rgba(0,0,0,0.45)", fontWeight: 500 }}>🎲 {quizCorrect} / {guessAnswers.length} trivia correct</div>}
-                <button onClick={() => go("upsell")} style={{ background: "rgba(242,164,230,0.20)", color: "var(--vetic-ink)", border: "none", padding: "14px 20px", borderRadius: 14, fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 14, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>✨ Make it even better · one tap, no card needed →</button>
+                {offers.length > 0 && <button onClick={() => go("upsell")} style={{ background: "rgba(242,164,230,0.20)", color: "var(--vetic-ink)", border: "none", padding: "14px 20px", borderRadius: 14, fontFamily: "var(--font-sans)", fontWeight: 700, fontSize: 14, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>✨ Make it even better · one tap, no card needed →</button>}
                 <button onClick={restart} style={{ background: "transparent", border: "none", color: "rgba(0,0,0,0.5)", fontWeight: 500, fontSize: 13, marginTop: 10, padding: 8, width: "100%", textAlign: "center" }}>Make another baby</button>
               </div>
             )}
@@ -694,14 +740,8 @@ export default function Home() {
                 <h2 className="display-h2" style={{ margin: "0 0 6px", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 36, lineHeight: "40px", letterSpacing: "-0.02em" }}>Make it even <Squiggle>better</Squiggle> 🍼</h2>
                 <p style={{ margin: "0 0 22px", fontWeight: 500, fontSize: 14, color: "var(--text-body)" }}>One tap, charged to the card you just used.</p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 22 }}>
-                  {([
-                    ["video", "🎥", "Music video", "Pick the vibe · giggle, dance, country…", "+$7", false] as const,
-                    ["ages", "📈", "Ages 5, 10, 18", "Watch them grow up", "+$9", false] as const,
-                    ["other", "👦👧", "Boy/girl version", "See the other gender", "+$5", false] as const,
-                    ["twin", "👶👶", "Twin / sibling", "Add another baby", "+$5", false] as const,
-                    ["hd", "🖼️", "HD + printable", "Frame-quality print for the nursery", "+$5", true] as const,
-                  ]).map(([key, emoji, title, sub, price, span2]) => (
-                    <div key={key} className="addon-card" data-addon={key} data-active={addOns[key]} {...clickable(() => toggleAddOn(key))} style={span2 ? { gridColumn: "span 2" } : undefined}>
+                  {offers.map(({ key, emoji, title, sub, price }, i) => (
+                    <div key={key} className="addon-card" data-addon={key} data-active={addOns[key]} {...clickable(() => toggleAddOn(key))} style={i === offers.length - 1 && offers.length % 2 === 1 ? { gridColumn: "span 2" } : undefined}>
                       <span className="addon-emoji">{emoji}</span>
                       <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div><div style={{ fontSize: 12, color: "var(--text-body)" }}>{sub}</div></div>
                       <span style={{ fontWeight: 700, fontSize: 14 }}>{price}</span>
