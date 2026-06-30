@@ -8,9 +8,9 @@ export const runtime = "nodejs";
 
 const key = process.env.STRIPE_SECRET_KEY;
 const TIERS: Record<string, { price: number; name: string }> = {
-  basic: { price: 1799, name: "Your AI Baby, Basic (3 HD photos)" },
-  deluxe: { price: 2900, name: "Your AI Baby, Deluxe (3 HD photos + giggle video)" },
-  ultimate: { price: 4900, name: "Your AI Baby, Ultimate (photos + age progression + HD)" },
+  basic: { price: 2499, name: "Your Future Baby, Starter (3 HD photos + video)" },
+  deluxe: { price: 3900, name: "Your Future Baby, Deluxe (photos + giggle & dance video + boy/girl)" },
+  ultimate: { price: 5900, name: "Your Future Baby, Ultimate (photos + video + ages + twin + HD)" },
 };
 
 async function toDataUri(f: File): Promise<string> {
@@ -39,10 +39,10 @@ export async function POST(req: NextRequest) {
 
   const tier = String(form.get("tier") || "basic");
   const plan = TIERS[tier] ?? TIERS.basic;
-  const addVideo = tier === "basic" && form.get("bump") === "1"; // order bump only on Basic
-  const bump = addVideo ? "1" : "";
-  const price = plan.price + (addVideo ? 700 : 0);
-  const name = addVideo ? `${plan.name} + giggle video` : plan.name;
+  // The old "+$7 add video" order bump is retired — video is included in every plan.
+  const bump = "";
+  const price = plan.price;
+  const name = plan.name;
 
   const token = crypto.randomUUID();
   await putParents(token, [await toDataUri(a), await toDataUri(b)], { tier, bump });

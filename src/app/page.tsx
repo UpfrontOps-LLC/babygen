@@ -5,23 +5,23 @@ import PayForm, { type PaymentSession } from "./components/PayForm";
 
 type Tier = { id: string; price: number; label: string; features: string[]; badge?: string };
 const TIERS: Tier[] = [
-  { id: "basic", price: 1799, label: "Basic", features: ["3 HD baby photos"] },
-  { id: "deluxe", price: 2900, label: "Deluxe", features: ["3 HD photos", "🎥 Giggle video"], badge: "Most popular" },
-  { id: "ultimate", price: 4900, label: "Ultimate", features: ["3 HD photos", "🎥 Video", "📈 Ages 5/10/18", "🖼️ Printable HD"] },
+  { id: "basic", price: 2499, label: "Starter", features: ["3 HD baby photos", "🎥 Baby-in-motion video"] },
+  { id: "deluxe", price: 3900, label: "Deluxe", features: ["3 HD photos", "🎥 Giggle + dance video", "👦👧 Boy & girl versions"], badge: "Most loved" },
+  { id: "ultimate", price: 5900, label: "Ultimate", features: ["Everything in Deluxe", "📈 Ages 5 / 10 / 18", "👶👶 Add a twin", "🖼️ Printable HD pack"] },
 ];
 
 const fmt = (cents: number) => `$${(cents / 100).toFixed(2).replace(/\.00$/, "")}`;
 
 const HEADLINES: Record<string, string> = {
-  A: "What will your baby look like?",
-  B: "See your future baby.",
+  A: "Watch your future baby come to life.",
+  B: "See your future baby — in motion.",
 };
 
 const FAQ = [
-  { q: "Is this really my baby?", a: "It's an AI's playful blend of both your faces, just for fun, not a real prediction." },
-  { q: "Do you keep my photos?", a: "No. Your uploads are deleted right after your images are made." },
-  { q: "How long does it take?", a: "Usually a minute or two. You watch it come together, then your baby is revealed." },
-  { q: "What do I get?", a: "3 HD baby photos. Deluxe adds a giggle video, Ultimate adds ages 5/10/18 + a printable pack." },
+  { q: "Is this really my baby?", a: "It's an AI's playful blend of both your faces, brought to life in a short video, just for fun — not a real prediction." },
+  { q: "Do you keep my photos?", a: "No. Your uploads are deleted right after your video and photos are made." },
+  { q: "How long does it take?", a: "Usually a minute or two. You watch it come together, then your baby is revealed — photos and video." },
+  { q: "What do I get?", a: "Every plan includes 3 HD baby photos plus a video of your baby in motion. Deluxe adds a giggle + dance video and the boy & girl versions; Ultimate adds ages 5/10/18, a twin, and a printable pack." },
 ];
 
 function track(event: string, data: Record<string, unknown> = {}) {
@@ -72,7 +72,9 @@ export default function Home() {
   }, []);
 
   const selected = TIERS.find((t) => t.id === tier) ?? TIERS[1];
-  const showBump = tier === "basic";
+  // Video is now included in every plan (incl. Starter), so the old "+$7 add video"
+  // bump is retired — never upsell what they already get.
+  const showBump = false;
   const total = selected.price + (showBump && bump ? 700 : 0);
 
   async function checkout() {
@@ -112,15 +114,24 @@ export default function Home() {
       {/* HERO */}
       <section className="flex flex-col items-center px-4 text-center">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 ring-1 ring-rose-200 px-3 py-1 text-xs font-bold text-rose-600 shadow-sm">
-          🔥 The AI baby trend, for real couples
+          🎥 Your future baby, brought to life — for real couples
         </span>
         <h1 data-variant={variant} className="mt-4 text-[2.6rem] leading-[1.02] sm:text-7xl font-black tracking-tight max-w-3xl" style={{ textWrap: "balance" }}>
           {HEADLINES[variant]}{" "}
           <span className="bg-gradient-to-r from-rose-500 to-pink-600 bg-clip-text text-transparent">👶</span>
         </h1>
         <p className="mt-4 text-lg sm:text-2xl text-gray-700 font-medium max-w-xl" style={{ textWrap: "balance" }}>
-          Drop in a photo of each parent. Meet your future baby in HD, plus a giggle video.
+          Drop in a photo of each parent. In about a minute, watch your future baby come to life — HD photos plus a video of them giggling, waving and dancing.
         </p>
+
+        {/* the wedge: front and center — no app, no install, no subscription */}
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+          {["Nothing to install", "No app to download", "No subscription"].map((t) => (
+            <span key={t} className="inline-flex items-center gap-1.5 rounded-full bg-white/80 ring-1 ring-rose-200 px-3 py-1.5 text-xs sm:text-sm font-black text-gray-800 shadow-sm">
+              <span className="text-rose-500">✓</span>{t}
+            </span>
+          ))}
+        </div>
 
         {/* the magic: 2 photos -> baby */}
         <div className="mt-7 flex items-center justify-center gap-2 sm:gap-3">
@@ -142,7 +153,7 @@ export default function Home() {
 
       {/* PROOF GALLERY */}
       <section className="mt-12 px-4">
-        <p className="text-center text-sm font-bold text-gray-700 mb-3">More AI babies people made ✨</p>
+        <p className="text-center text-sm font-bold text-gray-700 mb-3">More future babies, brought to life ✨</p>
         <div data-examples className="mx-auto grid grid-cols-3 gap-2.5 max-w-md">
           {[1, 2, 3].map((i) => (
             // eslint-disable-next-line @next/next/no-img-element
@@ -158,7 +169,7 @@ export default function Home() {
           {[
             { i: "📸", t: "Upload 2 photos", s: "One of each parent" },
             { i: "✨", t: "AI blends you", s: "Eyes, nose, smile" },
-            { i: "👶", t: "Meet your baby", s: "HD + video" },
+            { i: "👶", t: "Meet your baby", s: "Photos + video" },
           ].map((s) => (
             <div key={s.t} className="rounded-3xl bg-white/80 ring-1 ring-black/5 p-3 shadow-sm">
               <div className="text-3xl">{s.i}</div>

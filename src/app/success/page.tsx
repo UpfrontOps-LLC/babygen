@@ -20,7 +20,6 @@ const FACTS = [
   "😴 Newborns sleep up to 17 hours a day.",
 ];
 const UPSELLS = [
-  { id: "video", label: "🎥 Bring your baby to life (5s video)", price: 7 },
   { id: "ages", label: "📈 See them at 5, 10 & 18", price: 9 },
   { id: "gender", label: "👦👧 Make the boy / girl version", price: 5 },
   { id: "twins", label: "👶👶 Add a twin / sibling", price: 5 },
@@ -318,7 +317,7 @@ function Flow() {
                 disabled={selected.length === 0 || buying}
                 className="mt-4 w-full px-6 py-3.5 rounded-full bg-gradient-to-r from-rose-500 to-pink-600 text-white font-black shadow-lg shadow-rose-500/30 disabled:opacity-40 disabled:shadow-none hover:brightness-105 active:scale-[0.99] transition"
               >
-                {buying ? "Adding to your order…" : selected.length === 0 ? "Pick an add-on above" : `Add ${selected.length > 1 ? selected.length + " add-ons" : "this"} for $${total / 100 % 1 === 0 ? total / 100 : (total / 100).toFixed(2)} →`}
+                {buying ? "Adding to your order…" : selected.length === 0 ? "Pick an add-on above" : `Add ${selected.length > 1 ? selected.length + " add-ons" : "this"} for $${total} →`}
               </button>
               {buying && <p className="mt-2 text-center text-xs text-gray-500">Charging your saved card and creating them now…</p>}
               {!buying && <p className="mt-2 text-center text-xs text-gray-400">🔒 No need to re-enter your card</p>}

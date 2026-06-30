@@ -8,18 +8,18 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"),
-  title: "See Our Baby | AI Future Baby Generator",
+  title: "See Our Baby | Watch Your Future Baby Come to Life",
   description:
-    "Upload a photo of each parent and our AI imagines what your future baby could look like, just for fun, in about a minute.",
+    "Upload a photo of each parent and watch your future baby come to life — HD photos plus a video of them giggling, waving and dancing. Just for fun, in about a minute. No app, no subscription.",
   openGraph: {
-    title: "See Our Baby: What will your baby look like?",
-    description: "Upload two parents, see your future baby in HD. AI-generated, just for fun. 👶",
+    title: "See Our Baby: Watch your future baby come to life 🎥",
+    description: "Two parent photos in, your future baby in motion out — HD photos + video. Just for fun. 👶",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "See Our Baby: What will your baby look like?",
-    description: "Upload two parents, see your future baby in HD. AI-generated, just for fun. 👶",
+    title: "See Our Baby: Watch your future baby come to life 🎥",
+    description: "Two parent photos in, your future baby in motion out — HD photos + video. Just for fun. 👶",
   },
   alternates: { canonical: "/" },
   robots: { index: true, follow: true },

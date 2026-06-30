@@ -29,7 +29,8 @@ async function bindings(env?: CloudflareEnv): Promise<CloudflareEnv> {
 }
 
 export function wantsVideo(tier: string, bump: string): boolean {
-  return tier === "deluxe" || tier === "ultimate" || bump === "1";
+  // Video is now part of every plan (Starter included), so every paid order gets one.
+  return tier === "basic" || tier === "deluxe" || tier === "ultimate" || bump === "1";
 }
 export function wantsAges(tier: string): boolean {
   return tier === "ultimate";

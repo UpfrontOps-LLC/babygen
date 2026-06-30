@@ -8,8 +8,8 @@ export default function Terms() {
 
       <h2 className="font-semibold mt-6">What this is</h2>
       <p>
-        See Our Baby (UpfrontOps LLC) is an entertainment service that uses AI to imagine a baby image from two
-        uploaded photos. Results are <strong>AI-generated for fun and are not a real, medical, or genetic prediction</strong>
+        See Our Baby (UpfrontOps LLC) is an entertainment service that uses AI to imagine a baby image and short
+        video from two uploaded photos. Results are <strong>AI-generated for fun and are not a real, medical, or genetic prediction</strong>
         of any actual child.
       </p>
 
