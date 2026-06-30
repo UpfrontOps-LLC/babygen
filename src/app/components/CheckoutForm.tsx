@@ -38,7 +38,7 @@ function Inner({ session, onPaid }: { session: PaymentSession; onPaid: () => voi
       payment_method: { card: cardNumber },
     });
     if (error) {
-      setErr(error.message || "Payment failed — check your card and try again.");
+      setErr(error.message || "Payment failed, please check your card and try again.");
       setBusy(false);
       return;
     }
