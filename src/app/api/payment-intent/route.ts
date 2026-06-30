@@ -7,11 +7,16 @@ import { recordedSeconds, tierKey } from "@/lib/gen-timing";
 export const runtime = "nodejs";
 
 const key = process.env.STRIPE_SECRET_KEY;
+// Prices match the desktop design ($19 / $29 / $39) with server-authoritative
+// add-ons for twins (+$5) and age-progression (+$9). The amount is computed here,
+// never trusted from the client.
 const TIERS: Record<string, { price: number; name: string }> = {
-  basic: { price: 1799, name: "Your AI Baby, Basic (3 HD photos)" },
-  deluxe: { price: 2900, name: "Your AI Baby, Deluxe (3 HD photos + giggle video)" },
-  ultimate: { price: 4900, name: "Your AI Baby, Ultimate (photos + age progression + HD)" },
+  basic: { price: 1900, name: "Your AI Baby, Basic (3 HD photos)" },
+  deluxe: { price: 2900, name: "Your AI Baby, Deluxe (3 HD photos + music video)" },
+  ultimate: { price: 3900, name: "Your AI Baby, Ultimate (photos + ages 5/10/18 + HD)" },
 };
+const TWINS_CENTS = 500;
+const GROW_CENTS = 900;
 
 async function toDataUri(f: File): Promise<string> {
   const buf = Buffer.from(await f.arrayBuffer());
@@ -39,10 +44,13 @@ export async function POST(req: NextRequest) {
 
   const tier = String(form.get("tier") || "basic");
   const plan = TIERS[tier] ?? TIERS.basic;
-  const addVideo = tier === "basic" && form.get("bump") === "1"; // order bump only on Basic
+  const twins = form.get("twins") === "1";
+  const grow = form.get("grow") === "1";
+  const addVideo = tier === "basic" && form.get("bump") === "1"; // legacy order bump on Basic
   const bump = addVideo ? "1" : "";
-  const price = plan.price + (addVideo ? 700 : 0);
-  const name = addVideo ? `${plan.name} + giggle video` : plan.name;
+  const price = plan.price + (addVideo ? 700 : 0) + (twins ? TWINS_CENTS : 0) + (grow ? GROW_CENTS : 0);
+  const extras = [addVideo && "giggle video", twins && "twins", grow && "ages 5/10/18"].filter(Boolean).join(", ");
+  const name = extras ? `${plan.name} + ${extras}` : plan.name;
 
   const token = crypto.randomUUID();
   await putParents(token, [await toDataUri(a), await toDataUri(b)], { tier, bump });

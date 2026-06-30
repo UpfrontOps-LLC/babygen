@@ -4,6 +4,11 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
   trailingSlash: false,
+  // Opt-out of the in-build TS pass only when SKIP_BUILD_CHECKS=1 (memory-
+  // constrained staging builds; types are verified separately via `tsc --noEmit`).
+  typescript: { ignoreBuildErrors: process.env.SKIP_BUILD_CHECKS === "1" },
+  // Single page-collection worker keeps peak memory low on a shared box.
+  experimental: { cpus: 1 },
   images: {
     // applies when components migrate to next/image; harmless otherwise
     formats: ["image/avif", "image/webp"],

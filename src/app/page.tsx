@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import CheckoutForm, { type PaymentSession } from "./components/CheckoutForm";
 import "./sob-desktop.css";
 
 const MOM = "/samples/adults/adult01.webp";
@@ -74,6 +75,19 @@ const ArrowRight = ({ size = 17 }: { size?: number }) => (
 const Squiggle = ({ children }: { children: React.ReactNode }) => (
   <span style={{ position: "relative", display: "inline-block" }}>{children}<span className="squiggle" /></span>
 );
+// Make a non-button element (option card / chip / tier) operable by keyboard:
+// focusable + Enter/Space activate it, like a real button. Without this the
+// whole configure/review/upsell selection is mouse-only.
+function clickable(fn: () => void) {
+  return {
+    role: "button" as const,
+    tabIndex: 0,
+    onClick: fn,
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") { e.preventDefault(); fn(); }
+    },
+  };
+}
 const upper: CSSProperties = { fontWeight: 700, fontSize: 13, marginBottom: 10, color: "rgba(0,0,0,0.7)", textTransform: "uppercase", letterSpacing: "0.04em" };
 const sublabel: CSSProperties = { fontWeight: 700, fontSize: 11, color: "rgba(0,0,0,0.55)", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.05em" };
 
@@ -98,6 +112,9 @@ export default function Home() {
   const [addOns, setAddOns] = useState<AddOns>({ video: false, ages: false, other: false, twin: false, hd: false });
   const [toast, setToast] = useState("");
   const [payMethod, setPayMethod] = useState<"apple" | "google" | "card">("card");
+  const [pay, setPay] = useState<PaymentSession | null>(null);
+  const [payError, setPayError] = useState("");
+  const [creatingPI, setCreatingPI] = useState(false);
 
   const waitTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const factTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -136,6 +153,8 @@ export default function Home() {
     const r = new FileReader();
     r.onload = (ev) => set(String(ev.target?.result || ""));
     r.readAsDataURL(f);
+    // Reset the input so re-selecting the SAME file after a clear still fires change.
+    e.target.value = "";
   }
   function useExamples() { setP1(MOM); setP2(DAD); }
   function surpriseMe() {
@@ -144,7 +163,37 @@ export default function Home() {
     setTwins(Math.random() < 0.25);
   }
 
-  function pay() { go("wait"); startWait(); }
+  async function urlToFile(url: string, name: string): Promise<File> {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new File([blob], name, { type: blob.type || "image/jpeg" });
+  }
+  // Create a real Stripe PaymentIntent for the photos + chosen package. The price
+  // is computed server-side; the client only sends the selection.
+  async function createPaymentIntent() {
+    if (!p1 || !p2) { setPayError("Please add both parent photos first."); return; }
+    setCreatingPI(true); setPayError("");
+    try {
+      const [fa, fb] = await Promise.all([urlToFile(p1, "parentA.jpg"), urlToFile(p2, "parentB.jpg")]);
+      const fd = new FormData();
+      fd.append("parentA", fa); fd.append("parentB", fb);
+      fd.append("tier", tier);
+      fd.append("twins", twins ? "1" : "");
+      fd.append("grow", stage === "grow" ? "1" : "");
+      const res = await fetch("/api/payment-intent", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.clientSecret) setPay({ clientSecret: data.clientSecret, token: data.token, amount: data.amount, waitSeconds: data.waitSeconds });
+      else throw new Error(data.error || "checkout");
+    } catch {
+      setPayError("Checkout is temporarily unavailable. Please try again.");
+    } finally {
+      setCreatingPI(false);
+    }
+  }
+  // Always rebuild the intent on entry so price reflects the latest selection
+  // (the "change my mind, go back and forth" path).
+  function goToCheckout() { setPay(null); setPayError(""); go("checkout"); createPaymentIntent(); }
+  function onPaid() { go("wait"); startWait(); }
   function startWait() {
     setWaitProgress(0); setWaitQuestion(0); setWaitPhase("game"); setGuessAnswers([]); setFactIndex(0);
     [waitTimer, factTimer].forEach((t) => t.current && clearInterval(t.current));
@@ -182,6 +231,7 @@ export default function Home() {
     setTier("deluxe"); setPhotoStyle("surprise"); setVideoVibe("surprise"); setVideoScene("surprise"); setVideoOutfit("surprise"); setVideoMusic("surprise");
     setWaitProgress(0); setWaitQuestion(0); setGuessAnswers([]); setWaitPhase("game"); setFactIndex(0);
     setAddOns({ video: false, ages: false, other: false, twin: false, hd: false }); setToast("");
+    setPay(null); setPayError(""); setCreatingPI(false);
   }
 
   // Derived
@@ -385,7 +435,7 @@ export default function Home() {
                 <div style={upper}>Boy or girl?</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
                   {([["boy", "👦", "Boy", "var(--accent-blue)"], ["girl", "👧", "Girl", "var(--vetic-pink)"], ["surprise", "🎁", "Surprise me", "var(--accent-yellow)"]] as const).map(([g, e, t, bg]) => (
-                    <div key={g} className="opt-card" data-opt={`gender-${g}`} data-active={gender === g} onClick={() => setGender(g)} style={{ flexDirection: "column", padding: "16px 12px" }}>
+                    <div key={g} className="opt-card" data-opt={`gender-${g}`} data-active={gender === g} {...clickable(() => setGender(g))} style={{ flexDirection: "column", padding: "16px 12px" }}>
                       <div className="opt-emoji" style={{ background: bg }}>{e}</div><span style={{ fontWeight: 700, fontSize: 14 }}>{t}</span>
                     </div>
                   ))}
@@ -394,7 +444,7 @@ export default function Home() {
                 <div style={upper}>Baby or toddler?</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 20 }}>
                   {([["baby", "👶", "Baby", "Newborn cute", undefined], ["toddler", "🧒", "Toddler", "~2-3 years", "var(--accent-cyan)"], ["grow", "📈", "Watch them grow", "Ages 5, 10, 18", "var(--accent-purple)"]] as const).map(([s, e, t, sub, bg]) => (
-                    <div key={s} className="opt-card" data-opt={`stage-${s}`} data-active={stage === s} onClick={() => setStage(s)} style={{ flexDirection: "column", padding: "16px 12px" }}>
+                    <div key={s} className="opt-card" data-opt={`stage-${s}`} data-active={stage === s} {...clickable(() => setStage(s))} style={{ flexDirection: "column", padding: "16px 12px" }}>
                       <div className="opt-emoji" style={bg ? { background: bg } : undefined}>{e}</div>
                       <span style={{ fontWeight: 700, fontSize: 14 }}>{t}{s === "grow" && <span style={{ background: "var(--accent-yellow)", padding: "1px 7px", borderRadius: 999, fontSize: 11, marginLeft: 2 }}>+$9</span>}</span>
                       <span style={{ fontSize: 12, color: "var(--text-body)" }}>{sub}</span>
@@ -404,10 +454,10 @@ export default function Home() {
 
                 <div style={upper}>One baby or twins?</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 28 }}>
-                  <div className="opt-card" data-opt="twins-one" data-active={!twins} onClick={() => setTwins(false)} style={{ flexDirection: "column", padding: "16px 12px" }}>
+                  <div className="opt-card" data-opt="twins-one" data-active={!twins} {...clickable(() => setTwins(false))} style={{ flexDirection: "column", padding: "16px 12px" }}>
                     <div className="opt-emoji">👶</div><span style={{ fontWeight: 700, fontSize: 14 }}>Just one</span>
                   </div>
-                  <div className="opt-card" data-opt="twins-yes" data-active={twins} onClick={() => setTwins(true)} style={{ flexDirection: "column", padding: "16px 12px" }}>
+                  <div className="opt-card" data-opt="twins-yes" data-active={twins} {...clickable(() => setTwins(true))} style={{ flexDirection: "column", padding: "16px 12px" }}>
                     <div style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "center", height: 54 }}>
                       <div className="opt-emoji" style={{ background: "var(--accent-green)", width: 42, height: 42, fontSize: 22 }}>👶</div>
                       <div className="opt-emoji" style={{ background: "var(--accent-green)", width: 42, height: 42, fontSize: 22 }}>👶</div>
@@ -441,9 +491,9 @@ export default function Home() {
                 <p style={{ margin: "0 0 24px", fontWeight: 500, fontSize: 15, color: "var(--text-body)" }}>Last look before we get started.</p>
                 <div style={{ background: "var(--surface-page)", borderRadius: 22, padding: 22, marginBottom: 26 }}>
                   <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 14, justifyContent: "center" }}>
-                    <img src={MOM} alt="" style={{ width: 60, height: 60, borderRadius: 16, objectFit: "cover" }} />
+                    <img src={p1 ?? MOM} alt="Parent 1" style={{ width: 60, height: 60, borderRadius: 16, objectFit: "cover" }} />
                     <span style={{ fontSize: 22, color: "var(--vetic-pink)", fontWeight: 800 }}>+</span>
-                    <img src={DAD} alt="" style={{ width: 60, height: 60, borderRadius: 16, objectFit: "cover" }} />
+                    <img src={p2 ?? DAD} alt="Parent 2" style={{ width: 60, height: 60, borderRadius: 16, objectFit: "cover" }} />
                     <span style={{ fontSize: 22, color: "var(--vetic-pink)", fontWeight: 800 }}>=</span>
                     <div style={{ width: 60, height: 60, borderRadius: 16, background: "var(--vetic-pink)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>{babyEmoji}</div>
                   </div>
@@ -462,7 +512,7 @@ export default function Home() {
                     ["deluxe", "Deluxe", "$39", "$29", <>3 custom HD baby photos<br /><span style={{ whiteSpace: "nowrap" }}>🎥 1 music video</span></>, "Most popular"] as const,
                     ["ultimate", "Ultimate", "$49", "$39", <>All Deluxe<br /><span style={{ whiteSpace: "nowrap" }}>📈 Ages 5/10/18</span><br /><span style={{ whiteSpace: "nowrap" }}>🖼️ Printable HD</span></>, undefined] as const,
                   ]).map(([id, name, was, now, desc, badge]) => (
-                    <div key={id} className="tier-card" data-tier={id} data-active={tier === id} onClick={() => setTier(id)}>
+                    <div key={id} className="tier-card" data-tier={id} data-active={tier === id} {...clickable(() => setTier(id))}>
                       {badge && <span className="tier-badge">{badge}</span>}
                       <span className="tier-radio" style={{ marginBottom: 10 }} />
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -491,17 +541,29 @@ export default function Home() {
                     <div style={{ fontSize: 12, color: "var(--text-body)" }}>7-day refund · No questions asked</div>
                   </div>
                 </div>
+
+                {/* Itemised total so twins / ages add-ons are visibly calculated, not just baked into the button */}
+                <div style={{ background: "var(--surface-page)", borderRadius: 16, padding: "14px 18px", marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, marginBottom: (twins || stage === "grow") ? 6 : 0 }}>
+                    <span style={{ fontWeight: 600 }}>{tier.charAt(0).toUpperCase() + tier.slice(1)} package</span>
+                    <span style={{ fontWeight: 600 }}>${tierPrice}</span>
+                  </div>
+                  {twins && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "var(--text-body)", marginBottom: 4 }}><span>+ Twins</span><span>+$5</span></div>}
+                  {stage === "grow" && <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "var(--text-body)", marginBottom: 4 }}><span>+ Ages 5/10/18</span><span>+$9</span></div>}
+                  <div style={{ borderTop: "1px solid rgba(0,0,0,0.1)", marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 16 }}><span>Total</span><span>${totalPrice}</span></div>
+                </div>
+
                 <div style={{ fontSize: 12, textAlign: "center", color: "rgba(0,0,0,0.55)", marginBottom: 20, fontWeight: 500 }}>One time · No subscription · We never store your card to rebill you</div>
 
                 <div className="sticky-cta">
                   {payMethod === "apple" && (
                     <>
                       <div style={{ display: "flex", gap: 10 }}>
-                        <button onClick={pay} className="pay-pill apple-pay" style={{ flex: 1 }} aria-label="Pay with Apple Pay">
+                        <button onClick={goToCheckout} className="pay-pill apple-pay" style={{ flex: 1 }} aria-label="Pay with Apple Pay">
                           <svg width="17" height="21" viewBox="0 0 384 512" fill="#fff"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" /></svg>
                           <span className="pay-text">Pay</span>
                         </button>
-                        <button onClick={() => go("checkout")} className="pay-pill pink-pay" style={{ flex: 1 }} aria-label="Pay with card">
+                        <button onClick={goToCheckout} className="pay-pill pink-pay" style={{ flex: 1 }} aria-label="Pay with card">
                           <svg width="22" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
                           <span className="pay-text">Pay with Card</span>
                         </button>
@@ -512,11 +574,11 @@ export default function Home() {
                   {payMethod === "google" && (
                     <>
                       <div style={{ display: "flex", gap: 10 }}>
-                        <button onClick={pay} className="pay-pill gpay" style={{ flex: 1 }} aria-label="Pay with Google Pay">
+                        <button onClick={goToCheckout} className="pay-pill gpay" style={{ flex: 1 }} aria-label="Pay with Google Pay">
                           <svg width="22" height="22" viewBox="0 0 48 48"><path fill="#4285F4" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" /><path fill="#34A853" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" /><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" /><path fill="#EA4335" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" /></svg>
                           <span className="pay-text">Pay</span>
                         </button>
-                        <button onClick={() => go("checkout")} className="pay-pill pink-pay" style={{ flex: 1 }} aria-label="Pay with card">
+                        <button onClick={goToCheckout} className="pay-pill pink-pay" style={{ flex: 1 }} aria-label="Pay with card">
                           <svg width="22" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
                           <span className="pay-text">Pay with Card</span>
                         </button>
@@ -525,7 +587,7 @@ export default function Home() {
                     </>
                   )}
                   {payMethod === "card" && (
-                    <button onClick={() => go("checkout")} className="pay-pill pink-pay" style={{ width: "100%" }} aria-label="Pay with card">
+                    <button onClick={goToCheckout} className="pay-pill pink-pay" style={{ width: "100%" }} aria-label="Pay with card">
                       <svg width="22" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
                       <span className="pay-text">Pay with Card · ${totalPrice}</span>
                     </button>
@@ -549,27 +611,20 @@ export default function Home() {
                     <div style={{ marginTop: 18, padding: 12, background: "rgba(128, 253, 140, 0.20)", borderRadius: 12, display: "flex", gap: 8, alignItems: "center" }}><span style={{ fontSize: 20 }}>💯</span><div style={{ fontSize: 12, lineHeight: "16px" }}><strong>7-day refund</strong> if you don&apos;t love it</div></div>
                   </div>
                   <div>
-                    <button onClick={pay} style={{ background: "black", color: "white", padding: 14, border: "none", borderRadius: 12, fontFamily: "var(--font-sans)", fontWeight: 600, fontSize: 15, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 10 }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.7 13.5c0-1.9 1.6-2.9 1.7-2.9-.9-1.4-2.4-1.5-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.7-.7-1.4 0-2.7.8-3.4 2.1-1.4 2.5-.4 6.2 1 8.2.7 1 1.5 2.1 2.5 2 1 0 1.4-.6 2.6-.6s1.5.6 2.6.6c1.1 0 1.8-1 2.4-1.9.8-1.1 1.1-2.2 1.1-2.2s-2.2-.9-2.2-3.3M16.6 7.3c.5-.6.9-1.5.8-2.4-.8 0-1.7.5-2.3 1.2-.5.6-.9 1.5-.8 2.4.9.1 1.7-.4 2.3-1.2" /></svg>Pay with Apple Pay
-                    </button>
-                    <button onClick={pay} style={{ background: "white", color: "var(--vetic-ink)", padding: 14, border: "1.5px solid rgba(0,0,0,0.1)", borderRadius: 12, fontFamily: "var(--font-sans)", fontWeight: 600, fontSize: 15, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 16 }}>
-                      <span style={{ display: "inline-flex", gap: 1, fontWeight: 700 }}><span style={{ color: "#4285F4" }}>G</span><span style={{ color: "#EA4335" }}>o</span><span style={{ color: "#FBBC05" }}>o</span><span style={{ color: "#4285F4" }}>g</span><span style={{ color: "#34A853" }}>l</span><span style={{ color: "#EA4335" }}>e</span></span>Pay
-                    </button>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}><div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.1)" }} /><span style={{ fontSize: 12, color: "var(--text-body)", fontWeight: 500 }}>or pay with card</span><div style={{ flex: 1, height: 1, background: "rgba(0,0,0,0.1)" }} /></div>
-                    <div style={{ background: "white", borderRadius: 12, padding: 4, border: "1.5px solid rgba(0,0,0,0.1)", marginBottom: 16 }}>
-                      <div style={{ padding: "12px 14px", borderBottom: "1px solid rgba(0,0,0,0.06)", display: "flex", alignItems: "center", gap: 10 }}>
-                        <svg width="22" height="16" viewBox="0 0 24 16" fill="none"><rect x="0.5" y="0.5" width="23" height="15" rx="2.5" stroke="rgba(0,0,0,0.25)" /><rect x="3" y="9" width="6" height="3" fill="rgba(0,0,0,0.15)" /></svg>
-                        <span style={{ fontSize: 14, color: "rgba(0,0,0,0.4)" }}>1234 1234 1234 1234</span>
+                    {pay ? (
+                      <CheckoutForm session={pay} onPaid={onPaid} />
+                    ) : (
+                      <div style={{ textAlign: "center", padding: "40px 16px" }}>
+                        {payError ? (
+                          <>
+                            <p style={{ color: "#dc2626", fontWeight: 600, marginBottom: 12 }}>{payError}</p>
+                            <button onClick={createPaymentIntent} className="btn-secondary">Try again</button>
+                          </>
+                        ) : (
+                          <p style={{ color: "var(--text-body)", fontWeight: 600 }}>{creatingPI ? "Setting up secure checkout…" : "Preparing your order…"}</p>
+                        )}
                       </div>
-                      <div style={{ display: "flex" }}>
-                        <div style={{ flex: 1, padding: "12px 14px", borderRight: "1px solid rgba(0,0,0,0.06)", fontSize: 14, color: "rgba(0,0,0,0.4)" }}>MM / YY</div>
-                        <div style={{ flex: 1, padding: "12px 14px", fontSize: 14, color: "rgba(0,0,0,0.4)" }}>CVC</div>
-                      </div>
-                    </div>
-                    <div className="sticky-cta">
-                      <button onClick={pay} className="btn-primary" style={{ width: "100%", fontSize: 17 }}>Pay ${totalPrice} &amp; reveal<ArrowRight /></button>
-                    </div>
-                    <div style={{ marginTop: 14, display: "flex", gap: 14, justifyContent: "center", fontSize: 12, color: "rgba(0,0,0,0.55)", fontWeight: 500 }}><span>🔒 Stripe</span><span>🗑️ Photos deleted</span><span>💯 7-day refund</span></div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -646,7 +701,7 @@ export default function Home() {
                     ["twin", "👶👶", "Twin / sibling", "Add another baby", "+$5", false] as const,
                     ["hd", "🖼️", "HD + printable", "Frame-quality print for the nursery", "+$5", true] as const,
                   ]).map(([key, emoji, title, sub, price, span2]) => (
-                    <div key={key} className="addon-card" data-addon={key} data-active={addOns[key]} onClick={() => toggleAddOn(key)} style={span2 ? { gridColumn: "span 2" } : undefined}>
+                    <div key={key} className="addon-card" data-addon={key} data-active={addOns[key]} {...clickable(() => toggleAddOn(key))} style={span2 ? { gridColumn: "span 2" } : undefined}>
                       <span className="addon-emoji">{emoji}</span>
                       <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div><div style={{ fontSize: 12, color: "var(--text-body)" }}>{sub}</div></div>
                       <span style={{ fontWeight: 700, fontSize: 14 }}>{price}</span>
@@ -681,7 +736,7 @@ function ChipRow({ label, value, set, opts, mb }: { label: string; value: string
       <div style={sublabel}>{label}</div>
       <div className="chip-row" style={{ marginBottom: mb }}>
         {opts.map(([v, e, t]) => (
-          <span key={v} className="chip" data-val={v} data-active={value === v} onClick={() => set(v)}><span className="chip-emoji">{e}</span>{t}</span>
+          <span key={v} className="chip" data-val={v} data-active={value === v} {...clickable(() => set(v))}><span className="chip-emoji">{e}</span>{t}</span>
         ))}
       </div>
     </>

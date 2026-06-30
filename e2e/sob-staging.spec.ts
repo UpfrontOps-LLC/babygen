@@ -20,6 +20,15 @@ async function hostStays(page: Page) {
 const IMG = "public/samples/babies/baby01.webp";
 const IMG2 = "public/samples/adults/adult01.webp";
 
+// Fill the real Stripe test card across its per-field iframes.
+async function fillCard(page: Page, number = "4242424242424242") {
+  const frame = (testid: string) => page.locator(`[data-testid="${testid}"] iframe`).first().contentFrame();
+  await expect(page.locator('[data-testid="card-number"] iframe').first()).toBeVisible({ timeout: 25000 });
+  await frame("card-number").locator('input[name="cardnumber"]').fill(number);
+  await frame("card-expiry").locator('input[name="exp-date"]').fill("12 / 34");
+  await frame("card-cvc").locator('input[name="cvc"]').fill("123");
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   BASE_HOST = new URL(page.url()).host;
@@ -53,11 +62,10 @@ test("landing → upload → configure → review → checkout → wait → reve
   await inputs.nth(1).setInputFiles(IMG2);
   await expect(page.locator('.upload-tile[data-filled="true"]')).toHaveCount(2);
   await expect(page.getByText("Parent 1", { exact: false })).toBeVisible();
-  // clear one → continue disabled again
+  // clear one → continue disabled again, then re-upload a real photo
   await page.locator(".upload-tile .x").first().click();
   await expect(page.locator('.upload-tile[data-filled="true"]')).toHaveCount(1);
-  // "try with example photos" refills both
-  await page.getByRole("button", { name: /try with example photos/i }).click();
+  await page.locator('.upload-grid input[type="file"]').first().setInputFiles(IMG);
   await expect(page.locator('.upload-tile[data-filled="true"]')).toHaveCount(2);
   await page.getByRole("button", { name: /Choose your baby/i }).click();
   await expect(page.getByRole("heading", { name: /Choose your baby/i })).toBeVisible();
@@ -75,7 +83,7 @@ test("landing → upload → configure → review → checkout → wait → reve
   await page.locator('[data-opt="twins-yes"]').click();
   await expect(page.locator('.opt-card[data-active="true"]')).toHaveCount(3);
   // surprise me randomizes (ensure no crash, still 3 active)
-  await page.getByRole("button", { name: /Surprise me/i }).click();
+  await page.locator("button", { hasText: /Surprise me/i }).click();
   await expect(page.locator('.opt-card[data-active="true"]')).toHaveCount(3);
   // re-pin choices for deterministic pricing downstream
   await page.locator('[data-opt="stage-grow"]').click();
@@ -101,6 +109,13 @@ test("landing → upload → configure → review → checkout → wait → reve
   await page.locator('[data-tier="ultimate"]').click();
   await expect(page.locator('[data-tier="ultimate"][data-active="true"]')).toBeVisible();
   await page.locator('[data-tier="deluxe"]').click();
+  // BUG REGRESSIONS: review must show MY uploaded photo (not the example), and
+  // must itemise the Ages (+$9) / Twins (+$5) add-ons into the total.
+  await expect(page.locator('img[alt="Parent 1"]')).toHaveAttribute("src", /^data:/);
+  await expect(page.getByText("+ Ages 5/10/18")).toBeVisible();
+  await expect(page.getByText("+ Twins")).toBeVisible();
+  await expect(page.getByText("Total").last()).toBeVisible();
+  await expect(page.getByText("$43").first()).toBeVisible(); // 29 deluxe + 9 ages + 5 twins
   // pay-with-card → checkout
   await page.getByRole("button", { name: /Pay with Card/i }).click();
   await expect(page.getByRole("heading", { name: /Almost there/i })).toBeVisible();
@@ -113,7 +128,9 @@ test("landing → upload → configure → review → checkout → wait → reve
   await expect(page.getByText("+ Ages 5/10/18")).toBeVisible();
   // total = 29 + 5 + 9 = 43
   await expect(page.getByText("$43").first()).toBeVisible();
-  await page.getByRole("button", { name: /Pay \$43 & reveal/i }).click();
+  // REAL Stripe payment: type the test card, then pay
+  await fillCard(page);
+  await page.getByRole("button", { name: /Pay \$43\s*&\s*reveal/i }).click();
 
   // ---------- WAIT (guess game) ----------
   await expect(page.getByRole("heading", { name: /Your baby is on the way/i })).toBeVisible();
@@ -161,6 +178,44 @@ test("landing → upload → configure → review → checkout → wait → reve
   await hostStays(page);
 });
 
+test("real Stripe payment — type a card, change your mind, decline then succeed", async ({ page }) => {
+  await page.goto("/");
+  BASE_HOST = new URL(page.url()).host;
+  await page.getByRole("button", { name: /Make our baby/i }).first().click();
+  await page.getByRole("button", { name: /try with example photos/i }).click();
+  await page.getByRole("button", { name: /Choose your baby/i }).click();
+  await page.getByRole("button", { name: /^Continue$/ }).click();
+  await expect(page.getByRole("heading", { name: /Your future baby/i })).toBeVisible();
+
+  // Deluxe ($29) → real checkout with live Stripe card fields
+  await page.locator('[data-tier="deluxe"]').click();
+  await page.getByRole("button", { name: /Pay with Card/i }).click();
+  await expect(page.locator('[data-testid="card-number"] iframe').first()).toBeVisible({ timeout: 25000 });
+  await expect(page.getByRole("button", { name: /Pay \$29\s*&\s*reveal/i })).toBeVisible();
+  await hostStays(page);
+
+  // CHANGE MY MIND — back, switch to Ultimate, return: the real amount re-prices to $39
+  await page.getByRole("button", { name: /^Back$/ }).click();
+  await expect(page.getByRole("heading", { name: /Your future baby/i })).toBeVisible();
+  await page.locator('[data-tier="ultimate"]').click();
+  await page.getByRole("button", { name: /Pay with Card/i }).click();
+  await expect(page.getByRole("button", { name: /Pay \$39\s*&\s*reveal/i })).toBeVisible({ timeout: 25000 });
+
+  // DECLINED card → inline error, stays on checkout (no navigation)
+  await fillCard(page, "4000000000000002");
+  await page.getByRole("button", { name: /Pay \$39\s*&\s*reveal/i }).click();
+  await expect(page.locator('[data-testid="pay-error"]')).toBeVisible({ timeout: 25000 });
+  await expect(page.getByRole("heading", { name: /Almost there/i })).toBeVisible();
+  await hostStays(page);
+
+  // VALID card → payment succeeds → wait → reveal
+  await fillCard(page, "4242424242424242");
+  await page.getByRole("button", { name: /Pay \$39\s*&\s*reveal/i }).click();
+  await expect(page.getByRole("heading", { name: /Your baby is on the way/i })).toBeVisible({ timeout: 25000 });
+  await expect(page.getByRole("heading", { name: /Meet your baby/i })).toBeVisible({ timeout: 25000 });
+  await hostStays(page);
+});
+
 test("legal pages reachable and stay on host (no bounce to live)", async ({ page }) => {
   for (const [name, rx] of [
     ["Privacy", /privacy/i],
@@ -181,6 +236,18 @@ test("legal pages reachable and stay on host (no bounce to live)", async ({ page
       expect(host, `link ${h} points off-host`).toBe(BASE_HOST);
     }
   }
+});
+
+test("'try with example photos' fills both parents and reaches configure", async ({ page }) => {
+  await page.goto("/");
+  BASE_HOST = new URL(page.url()).host;
+  await page.getByRole("button", { name: /Make our baby/i }).first().click();
+  await expect(page.locator('.upload-tile[data-filled="true"]')).toHaveCount(0);
+  await page.getByRole("button", { name: /try with example photos/i }).click();
+  await expect(page.locator('.upload-tile[data-filled="true"]')).toHaveCount(2);
+  await page.getByRole("button", { name: /Choose your baby/i }).click();
+  await expect(page.getByRole("heading", { name: /Choose your baby/i })).toBeVisible();
+  await hostStays(page);
 });
 
 test("apple/google wallet button present on review and routes into the funnel", async ({ page }) => {

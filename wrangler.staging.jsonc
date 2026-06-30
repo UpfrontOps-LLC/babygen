@@ -25,11 +25,10 @@
 			"class_name": "GenerateBaby"
 		}
 	],
-	// Bind the staging subdomain (already provisioned). custom_domain keeps DNS + cert
-	// managed by Workers and scoped to staging.seeourbaby.com only.
-	"routes": [
-		{ "pattern": "staging.seeourbaby.com", "custom_domain": true }
-	],
+	// The staging.seeourbaby.com custom domain is attached to this Worker out of
+	// band (via the Cloudflare API) so deploys don't need a zone-scoped token.
+	// It persists across script updates — re-add a `routes` entry here only if a
+	// token with Zone › Workers Routes edit is used.
 	"vars": {
 		"NEXT_PUBLIC_BASE_URL": "https://staging.seeourbaby.com"
 	},
